@@ -1,16 +1,49 @@
-# React + Vite
+# ExpenseSnap – Personal Expense Tracker & Bill Splitter
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+ExpenseSnap is a personal expense tracking application built with React and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Add expenses with amount, category, and description.
+- View historical expenses.
+- Delete existing expenses.
+- Calculate total expenses dynamically.
+- Split bills equally among multiple people.
+- Save expense data in the browser using localStorage.
+- Use browser voice dictation for expense descriptions where supported.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- Vite
+- JavaScript
+- CSS
+- Browser localStorage
+- Web Speech API for voice dictation
 
-## Expanding the Oxlint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+1. Install Node.js.
+2. Clone the ExpenseSnap repository.
+3. Open the project folder in Cursor.
+4. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+5. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+6. Open the local URL displayed in the terminal.
+
+## Data Storage
+
+Expense data is stored locally in the browser. It is not automatically shared across devices or browsers.
+
+## Project Status
+
+Currently under development.
