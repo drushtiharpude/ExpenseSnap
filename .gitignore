@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Temporary logo-generation artifacts
+*.transparent.tmp.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

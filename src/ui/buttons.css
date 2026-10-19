@@ -1,0 +1,65 @@
+.btn {
+  font: inherit;
+  font-size: var(--font-size-ui);
+  width: fit-content;
+  color: var(--text-h);
+  background: var(--social-bg);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.btn--primary {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.btn--primary:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--danger {
+  color: var(--alert-error-text);
+  background: var(--alert-error-bg);
+  border-color: var(--alert-error-border);
+}
+
+.btn--danger:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--danger:focus-visible {
+  outline-color: var(--alert-error-border);
+}
+
+.btn.dictation-button[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.form-alert .btn,
+.category-alert .btn,
+.backup-alert .btn {
+  margin-top: var(--space-2);
+}

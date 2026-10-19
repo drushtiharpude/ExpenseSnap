@@ -1,0 +1,11 @@
+.theme-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.theme-settings p {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-ui);
+}

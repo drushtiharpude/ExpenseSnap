@@ -1,0 +1,103 @@
+.alert {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--social-bg);
+  color: var(--text-h);
+}
+
+.alert p {
+  margin: 0;
+}
+
+.alert p + p {
+  margin-top: var(--space-2);
+}
+
+.alert--info {
+  background: var(--alert-info-bg);
+  border-color: var(--alert-info-border);
+  color: var(--text-h);
+}
+
+.alert--info p {
+  color: var(--text-h);
+}
+
+.alert--success {
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+  color: var(--text-h);
+}
+
+.alert--warning {
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+  color: var(--text-h);
+}
+
+.alert--error {
+  background: var(--alert-error-bg);
+  border-color: var(--alert-error-border);
+  color: var(--text-h);
+}
+
+/* Legacy section class names → semantic error by default */
+.form-alert:not(.alert--warning):not(.alert--info):not(.alert--success),
+.category-alert,
+.backup-alert:not(.backup-alert-success):not(.alert--warning) {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--alert-error-border);
+  border-radius: var(--radius-sm);
+  background: var(--alert-error-bg);
+  color: var(--text-h);
+}
+
+.form-alert p,
+.category-alert p,
+.split-result p,
+.row-actions p {
+  margin: 0;
+}
+
+.backup-alert p {
+  margin: 0;
+}
+
+.backup-alert p + p {
+  margin-top: var(--space-2);
+}
+
+.backup-alert-success,
+.alert--success.backup-alert {
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+}
+
+.theme-notice {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--alert-info-border);
+  border-radius: var(--radius-sm);
+  background: var(--alert-info-bg);
+  color: var(--text-h);
+}
+
+.theme-notice.alert--warning {
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+}
+
+.theme-notice p {
+  margin: 0;
+}
+
+.alert--warning,
+.alert--warning.backup-alert,
+.alert--warning.form-alert,
+.alert--warning.theme-notice {
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+}

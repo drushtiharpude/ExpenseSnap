@@ -1,0 +1,151 @@
+.form-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.finance-form label,
+.transaction-form label,
+.filters label,
+.category-form label,
+.category-row label,
+.backup-file-label,
+.analytics-toolbar label,
+.description-field > label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--text-h);
+  font-size: var(--font-size-ui);
+}
+
+.finance-form input,
+.transaction-form input,
+.transaction-form select,
+.transaction-form textarea,
+.filters input,
+.filters select,
+.category-form input,
+.category-row input,
+.analytics-toolbar select,
+.backup-file-label input[type='file'] {
+  font: inherit;
+  color: var(--text-h);
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.finance-form input:focus-visible,
+.transaction-form input:focus-visible,
+.transaction-form select:focus-visible,
+.transaction-form textarea:focus-visible,
+.filters input:focus-visible,
+.filters select:focus-visible,
+.category-form input:focus-visible,
+.category-row input:focus-visible,
+.analytics-toolbar select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent-border);
+}
+
+.transaction-form textarea {
+  resize: vertical;
+}
+
+.transaction-form fieldset,
+.category-form fieldset,
+.backup-block fieldset,
+.theme-settings fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.type-toggle {
+  gap: var(--space-2);
+  padding: var(--space-1);
+  width: fit-content;
+  max-width: 100%;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.type-toggle legend {
+  margin-bottom: var(--space-2);
+  width: 100%;
+}
+
+.type-toggle label {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  color: var(--text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.type-toggle label:has(input:checked) {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.type-toggle label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.transaction-form fieldset label,
+.category-form fieldset label,
+.backup-block fieldset label,
+.theme-settings fieldset label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.transaction-form legend,
+.category-form legend,
+.backup-block legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--text-h);
+  font-size: var(--font-size-ui);
+}
+
+.form-actions,
+.row-actions,
+.backup-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

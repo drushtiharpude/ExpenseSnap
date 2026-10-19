@@ -1,0 +1,54 @@
+.dashboard-header,
+.finance-header,
+.settings-header,
+.transactions-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dashboard-lead,
+.finance-lead,
+.settings-lead,
+.transactions-lead {
+  color: var(--text);
+  font-size: var(--font-size-ui);
+  max-width: 42rem;
+}
+
+.dashboard-block,
+.finance-panel,
+.settings-panel,
+.transaction-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+}
+
+.dashboard-block h2,
+.dashboard-block h3,
+.finance-panel h2,
+.finance-panel h3,
+.settings-panel h2,
+.settings-panel h3,
+.transaction-panel h2,
+.transaction-panel h3 {
+  margin: 0;
+}
+
+.empty-state {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text);
+  font-size: var(--font-size-ui);
+  background: var(--surface-inset);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}

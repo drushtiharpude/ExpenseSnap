@@ -1,10 +1,32 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      ;(function () {
+        var key = 'expensesnap.theme.v1'
+        var theme = 'light'
+        try {
+          var raw = localStorage.getItem(key)
+          if (raw === 'light' || raw === 'dark') {
+            theme = raw
+          } else if (raw) {
+            try {
+              var parsed = JSON.parse(raw)
+              if (parsed === 'light' || parsed === 'dark') theme = parsed
+            } catch (e) {}
+          }
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', theme)
+        document.documentElement.style.colorScheme = theme
+      })()
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#0f766e" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1b22" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>expensesnap</title>
+    <meta name="description" content="ExpenseSnap — personal expense tracker with dashboard, transactions, bill splitting, and analytics." />
+    <title>ExpenseSnap</title>
   </head>
   <body>
     <div id="root"></div>

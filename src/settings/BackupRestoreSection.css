@@ -1,0 +1,63 @@
+.backup-restore {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.backup-restore > p {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-ui);
+  max-width: 42rem;
+}
+
+.backup-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.backup-block--export {
+  border-inline-start: 3px solid var(--accent);
+}
+
+.backup-block--restore {
+  border-inline-start: 3px solid var(--alert-warning-border);
+}
+
+.backup-block-title {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+}
+
+.backup-block p,
+.backup-note,
+.backup-file-name {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-body);
+}
+
+.backup-note {
+  padding: var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
+}
+
+.backup-file-name {
+  font-size: var(--font-size-caption);
+  color: var(--text-h);
+}
+
+.backup-confirm-actions {
+  margin-top: var(--space-3);
+}

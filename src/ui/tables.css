@@ -1,0 +1,96 @@
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-inset-wrap,
+.dashboard-table-wrap,
+.transaction-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+}
+
+.data-table,
+.dashboard-table,
+.transaction-table,
+.analytics-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td,
+.dashboard-table th,
+.dashboard-table td,
+.transaction-table th,
+.transaction-table td,
+.analytics-data-table th,
+.analytics-data-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th,
+.dashboard-table th,
+.transaction-table th,
+.analytics-data-table th {
+  color: var(--text-h);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  background: var(--surface-muted);
+}
+
+.data-table tbody tr:last-child td,
+.dashboard-table tbody tr:last-child td,
+.transaction-table tbody tr:last-child td,
+.analytics-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr:hover td,
+.dashboard-table tbody tr:hover td,
+.transaction-table tbody tr:hover td,
+.analytics-data-table tbody tr:hover td {
+  background: var(--surface-muted);
+}
+
+.data-table .col-amount,
+.data-table th.col-amount,
+.dashboard-table .col-amount,
+.dashboard-table th.col-amount,
+.transaction-table .col-amount,
+.transaction-table th.col-amount,
+.analytics-data-table .col-amount,
+.analytics-data-table th.col-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-table {
+  min-width: 720px;
+}
+
+.analytics-data-table caption {
+  text-align: left;
+  color: var(--text);
+  font-size: var(--font-size-caption);
+  margin-bottom: var(--space-2);
+}
+
+.amount {
+  margin: var(--space-1) 0 0;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stat-grid dd {
+  margin: var(--space-1) 0 0;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
