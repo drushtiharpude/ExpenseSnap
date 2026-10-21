@@ -6,8 +6,12 @@ import {
   categoriesForType,
   categoryLabel,
   filterCategoryOptions,
+  PREDEFINED_CATEGORIES,
   withSelectedCategory,
 } from './categories.js'
+import PageHeader from '../ui/PageHeader.jsx'
+import { PAGE_TAGLINES } from '../ui/pageHeaderCopy.js'
+import { BudgetRowIcon, CategoryExpenseIcon, FilterIcon } from '../ui/shellIcons.jsx'
 import DescriptionDictation from './DescriptionDictation.jsx'
 import { formatInrFromPaise, paiseToRupeeInput, rupeesInputToPaise } from './money.js'
 import './TransactionsSection.css'
@@ -50,6 +54,18 @@ function compareTransactions(left, right) {
   return left.id.localeCompare(right.id)
 }
 
+function hasBuiltInCategoryIcon(categoryId) {
+  return PREDEFINED_CATEGORIES.some((category) => category.id === categoryId)
+}
+
+const EMPTY_FILTERS = {
+  query: '',
+  type: 'all',
+  categoryId: 'all',
+  from: '',
+  to: '',
+}
+
 function readStorageState() {
   const result = readTransactions()
   if (result.ok) return { records: result.transactions, loadError: null }
@@ -66,6 +82,7 @@ function TransactionsSection() {
   const [editingId, setEditingId] = useState(null)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState({
     query: '',
     type: 'all',
@@ -256,13 +273,47 @@ function TransactionsSection() {
   }, [records, filters, dateRangeInvalid])
 
   const storageBlocked = records === null
+  const filtersActive =
+    filters.query.trim() !== '' ||
+    filters.type !== 'all' ||
+    filters.categoryId !== 'all' ||
+    filters.from !== '' ||
+    filters.to !== ''
+
+  function clearFilters() {
+    setFilters({ ...EMPTY_FILTERS })
+  }
+
+  function focusAddForm() {
+    if (editingId) resetForm()
+    setPendingDeleteId(null)
+    const formEl = document.getElementById('transaction-form')
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    formEl?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' })
+    formEl?.querySelector('input[name="amount"]')?.focus()
+  }
 
   return (
     <section className="transactions" aria-labelledby="section-title">
-      <header className="transactions-header">
-        <h1 id="section-title">Transactions</h1>
-        <p className="transactions-lead">Income and expenses saved in this browser.</p>
-      </header>
+      <PageHeader
+        icon="transactions"
+        title="Transactions"
+        tagline={PAGE_TAGLINES.transactions}
+        description="Add entries quickly, filter your history, and edit or remove anything you have saved here."
+      >
+        {!storageBlocked && (
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={focusAddForm}
+            disabled={submitting}
+          >
+            Add transaction
+          </button>
+        )}
+      </PageHeader>
 
       {loadError && (
         <div className="form-alert" role="alert">
@@ -298,8 +349,28 @@ function TransactionsSection() {
 
       {storageBlocked ? null : (
         <>
-          <form className="transaction-form transaction-panel transaction-panel--form" onSubmit={handleSubmit}>
-            <h2 className="transaction-panel-title">{editingId ? 'Edit transaction' : 'Add transaction'}</h2>
+          <form
+            id="transaction-form"
+            className={`transaction-form transaction-panel transaction-panel--form${
+              editingId ? ' transaction-form--editing' : ''
+            }`}
+            onSubmit={handleSubmit}
+          >
+            <header className="section-head section-head--in-panel">
+              <h2 className="section-head__title">
+                {editingId ? 'Edit transaction' : 'Add transaction'}
+              </h2>
+              <p className="section-head__sub">
+                {editingId
+                  ? 'Update the fields below, then save changes.'
+                  : 'Choose type, amount, date, category, and an optional description.'}
+              </p>
+            </header>
+            {editingId && (
+              <p className="txn-editing-notice" role="status">
+                You are editing a saved row. Cancel to return to add mode.
+              </p>
+            )}
             <fieldset className="type-toggle txn-type-toggle">
               <legend>Type</legend>
               <label>
@@ -324,42 +395,46 @@ function TransactionsSection() {
               </label>
             </fieldset>
 
-            <div className="form-grid form-grid--3">
-              <label>
-                Amount (₹)
-                <input
-                  name="amount"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  required
-                  value={form.amount}
-                  onChange={(event) => updateField('amount', event.target.value)}
-                />
-              </label>
-              <label>
-                Date
-                <input
-                  name="date"
-                  type="date"
-                  required
-                  value={form.date}
-                  onChange={(event) => updateField('date', event.target.value)}
-                />
-              </label>
-              <label>
-                Category
-                <select
-                  name="category"
-                  value={form.categoryId}
-                  onChange={(event) => updateField('categoryId', event.target.value)}
-                >
-                  {formCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="txn-form-fields">
+              <div className="form-grid form-grid--3 txn-form-grid">
+                <label className="txn-field txn-field--amount">
+                  Amount (₹)
+                  <input
+                    name="amount"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    required
+                    value={form.amount}
+                    aria-invalid={formErrors.length > 0 ? true : undefined}
+                    aria-describedby={formErrors.length > 0 ? 'transaction-form-errors' : undefined}
+                    onChange={(event) => updateField('amount', event.target.value)}
+                  />
+                </label>
+                <label className="txn-field txn-field--date">
+                  Date
+                  <input
+                    name="date"
+                    type="date"
+                    required
+                    value={form.date}
+                    onChange={(event) => updateField('date', event.target.value)}
+                  />
+                </label>
+                <label className="txn-field txn-field--category">
+                  Category
+                  <select
+                    name="category"
+                    value={form.categoryId}
+                    onChange={(event) => updateField('categoryId', event.target.value)}
+                  >
+                    {formCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
 
             <DescriptionDictation
@@ -371,7 +446,7 @@ function TransactionsSection() {
             />
 
             {formErrors.length > 0 && (
-              <div className="form-alert" role="alert">
+              <div className="form-alert" role="alert" id="transaction-form-errors">
                 {formErrors.map((error) => (
                   <p key={error}>{error}</p>
                 ))}
@@ -390,88 +465,6 @@ function TransactionsSection() {
             </div>
           </form>
 
-          <div className="filters transaction-panel transaction-panel--filters" role="search">
-            <h2 className="transaction-panel-title">Find transactions</h2>
-            <div className="form-grid filters-grid">
-              <label>
-                Search descriptions
-                <input
-                  name="search"
-                  type="search"
-                  value={filters.query}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, query: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Type
-                <select
-                  name="filter-type"
-                  value={filters.type}
-                  onChange={(event) => {
-                    const type = event.target.value
-                    setFilters((current) => {
-                      const options = filterCategoryOptions(type, customState.categories, records ?? [])
-                      const categoryId = options.some((option) => option.id === current.categoryId)
-                        ? current.categoryId
-                        : 'all'
-                      return { ...current, type, categoryId }
-                    })
-                  }}
-                >
-                  <option value="all">All types</option>
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
-              </label>
-              <label>
-                Category
-                <select
-                  name="filter-category"
-                  value={filters.categoryId}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, categoryId: event.target.value }))
-                  }
-                >
-                  <option value="all">All categories</option>
-                  {filterCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                From
-                <input
-                  name="from"
-                  type="date"
-                  value={filters.from}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, from: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                To
-                <input
-                  name="to"
-                  type="date"
-                  value={filters.to}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, to: event.target.value }))
-                  }
-                />
-              </label>
-            </div>
-            {dateRangeInvalid && (
-              <div className="form-alert alert--warning" role="alert">
-                <p>The start date must be on or before the end date. The date range is not applied.</p>
-              </div>
-            )}
-          </div>
-
           {actionError && (
             <div className="form-alert" role="alert">
               <p>{actionError}</p>
@@ -479,15 +472,170 @@ function TransactionsSection() {
           )}
 
           <div className="transaction-list transaction-panel transaction-panel--list">
-            <h2 className="transaction-list-heading transaction-panel-title">
-              {visible.length} {visible.length === 1 ? 'transaction' : 'transactions'}
-            </h2>
+            <header className="transactions-list-head transactions-list-head--toolbar">
+              <div className="transactions-list-head-copy section-head section-head--in-panel">
+                <h2 className="section-head__title">Saved transactions</h2>
+                <p className="section-head__sub">
+                  {visible.length} {visible.length === 1 ? 'row' : 'rows'} shown
+                  {records.length !== visible.length
+                    ? ` of ${records.length} saved`
+                    : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                className={`btn transactions-filter-toggle${
+                  filtersActive ? ' transactions-filter-toggle--active' : ''
+                }`}
+                aria-expanded={filtersOpen}
+                aria-controls="transaction-filters-panel"
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <FilterIcon />
+                <span>Filter</span>
+                {filtersActive ? (
+                  <span className="transactions-filter-toggle-badge" aria-hidden="true">
+                    On
+                  </span>
+                ) : null}
+              </button>
+            </header>
+
+            <div
+              id="transaction-filters-panel"
+              className={`transactions-filters-panel${
+                filtersActive ? ' transactions-filters-panel--active' : ''
+              }`}
+              role="search"
+              aria-label="Search and filter saved transactions"
+              hidden={!filtersOpen}
+            >
+              <div className="transactions-filters-panel-inner">
+                {filtersActive && (
+                  <p className="transactions-filter-hint" role="status">
+                    Filters are on — {visible.length} of {records.length} transactions match.
+                  </p>
+                )}
+                <div className="form-grid filters-grid">
+                  <label>
+                    Search descriptions
+                    <input
+                      name="search"
+                      type="search"
+                      value={filters.query}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, query: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Type
+                    <select
+                      name="filter-type"
+                      value={filters.type}
+                      onChange={(event) => {
+                        const type = event.target.value
+                        setFilters((current) => {
+                          const options = filterCategoryOptions(
+                            type,
+                            customState.categories,
+                            records ?? [],
+                          )
+                          const categoryId = options.some((option) => option.id === current.categoryId)
+                            ? current.categoryId
+                            : 'all'
+                          return { ...current, type, categoryId }
+                        })
+                      }}
+                    >
+                      <option value="all">All types</option>
+                      <option value="expense">Expense</option>
+                      <option value="income">Income</option>
+                    </select>
+                  </label>
+                  <label>
+                    Category
+                    <select
+                      name="filter-category"
+                      value={filters.categoryId}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, categoryId: event.target.value }))
+                      }
+                    >
+                      <option value="all">All categories</option>
+                      {filterCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    From
+                    <input
+                      name="from"
+                      type="date"
+                      value={filters.from}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, from: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    To
+                    <input
+                      name="to"
+                      type="date"
+                      value={filters.to}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, to: event.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+                {dateRangeInvalid && (
+                  <div className="form-alert alert--warning" role="alert">
+                    <p>
+                      The start date must be on or before the end date. The date range is not
+                      applied.
+                    </p>
+                  </div>
+                )}
+                {filtersActive && (
+                  <div className="transactions-filters-panel-actions">
+                    <button type="button" className="btn" onClick={clearFilters}>
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {visible.length === 0 ? (
-              <p className="empty-state">
-                {records.length === 0
-                  ? 'No transactions yet. Use the form above to add your first entry.'
-                  : 'No transactions match these filters.'}
-              </p>
+              records.length === 0 ? (
+                <div className="transactions-empty transactions-empty--first-use">
+                  <h3 className="transactions-empty-title">Start your transaction list</h3>
+                  <p className="transactions-empty-body">
+                    Record an expense or income entry with the form above, or use{' '}
+                    <strong>Add transaction</strong> in the page header. Your saved rows will
+                    appear here with dates, categories, and amounts.
+                  </p>
+                  <button type="button" className="btn btn--primary" onClick={focusAddForm}>
+                    Add your first transaction
+                  </button>
+                </div>
+              ) : (
+                <div className="transactions-empty transactions-empty--no-match">
+                  <h3 className="transactions-empty-title">No matching transactions</h3>
+                  <p className="transactions-empty-body">
+                    Nothing in your saved history matches the current search or filters. Try a
+                    shorter search term, widen the date range, or reset filters to see all rows.
+                  </p>
+                  <button type="button" className="btn" onClick={clearFilters}>
+                    Clear filters
+                  </button>
+                </div>
+              )
             ) : (
               <div className="table-scroll transaction-table-wrap">
                 <table className="transaction-table">
@@ -501,13 +649,26 @@ function TransactionsSection() {
                       <th scope="col" className="col-amount">
                         Amount
                       </th>
-                      <th scope="col">Actions</th>
+                      <th scope="col" className="col-actions">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visible.map((transaction) => (
-                      <tr key={transaction.id}>
-                        <td>{transaction.date}</td>
+                    {visible.map((transaction) => {
+                      const catLabel = categoryLabel(
+                        transaction.categoryId,
+                        customState.categories,
+                      )
+                      const showCatIcon = hasBuiltInCategoryIcon(transaction.categoryId)
+                      return (
+                      <tr
+                        key={transaction.id}
+                        className={
+                          editingId === transaction.id ? 'transaction-row--editing' : undefined
+                        }
+                      >
+                        <td className="txn-date">{transaction.date}</td>
                         <td>
                           <span
                             className={
@@ -519,14 +680,23 @@ function TransactionsSection() {
                             {transaction.type === 'income' ? 'Income' : 'Expense'}
                           </span>
                         </td>
-                        <td>{categoryLabel(transaction.categoryId, customState.categories)}</td>
+                        <td className="txn-category">
+                          <span className="txn-category-inner">
+                            {showCatIcon ? (
+                              <span className="txn-category-icon" aria-hidden="true">
+                                <CategoryExpenseIcon categoryId={transaction.categoryId} />
+                              </span>
+                            ) : null}
+                            <span className="txn-category-label">{catLabel}</span>
+                          </span>
+                        </td>
                         <td className="txn-description">{transaction.description || '—'}</td>
                         <td
                           className={`amount col-amount ${transaction.type === 'income' ? 'amount--income' : 'amount--expense'}`}
                         >
                           {formatInrFromPaise(transaction.amountPaise)}
                         </td>
-                        <td>
+                        <td className="col-actions">
                           {pendingDeleteId === transaction.id ? (
                             <div className="row-actions row-actions--confirm">
                               <p className="row-actions-prompt">Delete this transaction?</p>
@@ -548,22 +718,32 @@ function TransactionsSection() {
                               </button>
                             </div>
                           ) : (
-                            <div className="row-actions">
-                              <button type="button" className="btn" onClick={() => startEdit(transaction)}>
-                                Edit
+                            <div className="row-actions row-actions--icons">
+                              <button
+                                type="button"
+                                className="btn btn--icon"
+                                aria-label={`Edit transaction on ${transaction.date}, ${catLabel}`}
+                                title="Edit transaction"
+                                disabled={submitting}
+                                onClick={() => startEdit(transaction)}
+                              >
+                                <BudgetRowIcon name="edit" />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn--danger"
+                                className="btn btn--icon btn--danger"
+                                aria-label={`Delete transaction on ${transaction.date}, ${catLabel}`}
+                                title="Delete transaction"
+                                disabled={submitting}
                                 onClick={() => setPendingDeleteId(transaction.id)}
                               >
-                                Delete
+                                <BudgetRowIcon name="delete" />
                               </button>
                             </div>
                           )}
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>

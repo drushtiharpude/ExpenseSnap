@@ -26,15 +26,19 @@
 .category-row label,
 .backup-file-label,
 .analytics-toolbar label,
+.analytics-budget-form label,
 .description-field > label {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   color: var(--text-h);
   font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
 }
 
 .finance-form input,
+.finance-form select,
 .transaction-form input,
 .transaction-form select,
 .transaction-form textarea,
@@ -43,6 +47,8 @@
 .category-form input,
 .category-row input,
 .analytics-toolbar select,
+.analytics-budget-form input,
+.analytics-budget-form select,
 .backup-file-label input[type='file'] {
   font: inherit;
   color: var(--text-h);
@@ -50,9 +56,50 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
+  min-height: var(--control-height);
+  max-width: 100%;
+  box-sizing: border-box;
+  transition:
+    border-color var(--transition-interactive),
+    background-color var(--transition-interactive),
+    box-shadow var(--transition-interactive);
+}
+
+.finance-form textarea,
+.transaction-form textarea {
+  min-height: 5rem;
+}
+
+.finance-form input::placeholder,
+.transaction-form input::placeholder,
+.transaction-form textarea::placeholder,
+.filters input::placeholder,
+.category-form input::placeholder {
+  color: var(--text);
+  opacity: 1;
+}
+
+.finance-form input:disabled,
+.finance-form select:disabled,
+.transaction-form input:disabled,
+.transaction-form select:disabled,
+.transaction-form textarea:disabled,
+.filters input:disabled,
+.filters select:disabled,
+.category-form input:disabled,
+.category-row input:disabled,
+.analytics-toolbar select:disabled,
+.analytics-budget-form input:disabled,
+.analytics-budget-form select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+  color: var(--text);
 }
 
 .finance-form input:focus-visible,
+.finance-form select:focus-visible,
 .transaction-form input:focus-visible,
 .transaction-form select:focus-visible,
 .transaction-form textarea:focus-visible,
@@ -60,10 +107,13 @@
 .filters select:focus-visible,
 .category-form input:focus-visible,
 .category-row input:focus-visible,
-.analytics-toolbar select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-color: var(--accent-border);
+.analytics-toolbar select:focus-visible,
+.analytics-budget-form input:focus-visible,
+.analytics-budget-form select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .transaction-form textarea {
@@ -116,11 +166,17 @@
   color: var(--accent);
   background: var(--accent-bg);
   border-color: var(--accent-border);
+  font-weight: var(--font-weight-semibold);
 }
 
 .type-toggle label:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.type-toggle label:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .transaction-form fieldset label,
@@ -148,4 +204,24 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .type-toggle label,
+  .finance-form input,
+  .finance-form select,
+  .transaction-form input,
+  .transaction-form select,
+  .transaction-form textarea,
+  .filters input,
+  .filters select,
+  .category-form input,
+  .category-row input,
+  .analytics-toolbar select,
+  .analytics-budget-form input,
+  .analytics-budget-form select {
+    transition: none;
+  }
 }

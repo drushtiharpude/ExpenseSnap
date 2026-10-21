@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import AnalyticsSection from './finance/AnalyticsSection.jsx'
 import BillSplitter from './finance/BillSplitter.jsx'
+import BudgetSection from './finance/BudgetSection.jsx'
+import RecurringBillsSection from './finance/RecurringBillsSection.jsx'
 import DashboardSection from './finance/DashboardSection.jsx'
+import MoneyCoachSection from './finance/MoneyCoachSection.jsx'
 import CategoriesSection from './settings/CategoriesSection.jsx'
 import TransactionsSection from './transactions/TransactionsSection.jsx'
 import { ShellNavIcon } from './ui/shellIcons.jsx'
@@ -31,6 +34,24 @@ const SECTIONS = [
     label: 'Analytics',
     summary: 'Spending patterns will appear here.',
     icon: 'analytics',
+  },
+  {
+    id: 'budgets',
+    label: 'Budgets',
+    summary: 'Monthly category limits will appear here.',
+    icon: 'budgets',
+  },
+  {
+    id: 'bills',
+    label: 'Recurring Bills',
+    summary: 'Scheduled bills and due dates will appear here.',
+    icon: 'bills',
+  },
+  {
+    id: 'coach',
+    label: 'Money Coach',
+    summary: 'Ask questions about your spending.',
+    icon: 'coach',
   },
   {
     id: 'settings',
@@ -75,6 +96,11 @@ function App() {
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_NAV_MQ).matches : false,
   )
   const section = SECTIONS.find((item) => item.id === sectionId) ?? SECTIONS[0]
+  const [storageRevision, setStorageRevision] = useState(0)
+
+  function handleStorageRestored() {
+    setStorageRevision((revision) => revision + 1)
+  }
 
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_NAV_MQ)
@@ -175,15 +201,27 @@ function App() {
 
       <main className="shell-main">
         {section.id === 'transactions' ? (
-          <TransactionsSection />
+          <TransactionsSection key={storageRevision} />
         ) : section.id === 'dashboard' ? (
-          <DashboardSection />
+          <DashboardSection
+            key={storageRevision}
+            onNavigateToBudgets={() => selectSection('budgets')}
+          />
         ) : section.id === 'splitter' ? (
-          <BillSplitter />
+          <BillSplitter key={storageRevision} />
         ) : section.id === 'analytics' ? (
-          <AnalyticsSection />
+          <AnalyticsSection key={storageRevision} />
+        ) : section.id === 'budgets' ? (
+          <BudgetSection key={storageRevision} />
+        ) : section.id === 'bills' ? (
+          <RecurringBillsSection key={storageRevision} />
+        ) : section.id === 'coach' ? (
+          <MoneyCoachSection key={storageRevision} />
         ) : section.id === 'settings' ? (
-          <CategoriesSection />
+          <CategoriesSection
+            key={storageRevision}
+            onStorageRestored={handleStorageRestored}
+          />
         ) : (
           <section aria-labelledby="section-title">
             <h1 id="section-title">{section.label}</h1>

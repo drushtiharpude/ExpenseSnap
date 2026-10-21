@@ -1,6 +1,6 @@
 /**
  * ExpenseSnap design tokens. Theme-specific values; legacy aliases preserved.
- * Visual redesign Phase 1: typography scale, surfaces, spacing, elevation aliases.
+ * Premium dark Phase 1: navy surfaces, emerald accent, semantic money tokens; light theme preserved.
  */
 
 :root,
@@ -60,6 +60,7 @@
 
   --money-income: var(--alert-success-text);
   --money-expense: var(--alert-error-text);
+  --money-balance: #0369a1;
 
   /* Legacy aliases — used across section stylesheets */
   --bg: var(--surface-1);
@@ -73,53 +74,57 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --surface-0: #0f1014;
-  --surface-1: #1a1b22;
-  --surface-input: #22232c;
-  --surface-muted: rgba(45, 212, 191, 0.08);
-  --surface-inset: #14161c;
-  --surface-elevated: #1e1f27;
+  /* Surfaces — deep navy stack (canvas → content → elevated → inset) */
+  --surface-0: #0b1120;
+  --surface-1: #0f172a;
+  --surface-input: #1e293b;
+  --surface-muted: rgba(16, 185, 129, 0.08);
+  --surface-inset: #111827;
+  --surface-elevated: #1e293b;
 
   --text: #94a3b8;
-  --text-h: #f1f5f9;
+  --text-h: #f8fafc;
 
-  --border: #2e3340;
-  --border-subtle: #252932;
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.25);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --border: rgb(148 163 184 / 0.16);
+  --border-subtle: rgb(148 163 184 / 0.09);
+  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md:
-    rgba(0, 0, 0, 0.45) 0 10px 15px -3px, rgba(0, 0, 0, 0.3) 0 4px 6px -2px;
+    rgb(0 0 0 / 0.5) 0 10px 15px -3px, rgb(0 0 0 / 0.35) 0 4px 6px -2px;
   --shadow-panel: var(--shadow-sm);
   --shadow-card: var(--shadow-xs);
 
-  --accent: #2dd4bf;
-  --accent-bg: rgba(45, 212, 191, 0.14);
-  --accent-border: rgba(45, 212, 191, 0.45);
+  /* Primary accent — restrained emerald (UI chrome, actions, focus) */
+  --accent: #10b981;
+  --accent-bg: rgba(16, 185, 129, 0.12);
+  --accent-border: rgba(16, 185, 129, 0.32);
 
+  /* Charts — distinct from UI accent; series remain distinguishable */
   --chart-1: #818cf8;
-  --chart-2: #2dd4bf;
-  --chart-3: #22d3ee;
-  --chart-4: #34d399;
+  --chart-2: #34d399;
+  --chart-3: #60a5fa;
+  --chart-4: #2dd4bf;
   --chart-5: #fbbf24;
   --chart-6: #f472b6;
   --chart-7: #a78bfa;
-  --chart-8: #94a3b8;
+  --chart-8: #64748b;
 
-  --alert-info-bg: rgba(34, 211, 238, 0.1);
-  --alert-info-border: rgba(34, 211, 238, 0.35);
-  --alert-info-text: #67e8f9;
-  --alert-success-bg: rgba(52, 211, 153, 0.12);
-  --alert-success-border: rgba(52, 211, 153, 0.4);
-  --alert-success-text: #6ee7b7;
+  --alert-info-bg: rgba(56, 189, 248, 0.1);
+  --alert-info-border: rgba(56, 189, 248, 0.32);
+  --alert-info-text: #7dd3fc;
+  --alert-success-bg: rgba(16, 185, 129, 0.12);
+  --alert-success-border: rgba(16, 185, 129, 0.38);
+  --alert-success-text: #34d399;
   --alert-warning-bg: rgba(251, 191, 36, 0.12);
-  --alert-warning-border: rgba(251, 191, 36, 0.45);
+  --alert-warning-border: rgba(251, 191, 36, 0.4);
   --alert-warning-text: #fcd34d;
   --alert-error-bg: rgba(248, 113, 113, 0.12);
-  --alert-error-border: rgba(248, 113, 113, 0.4);
-  --alert-error-text: #fca5a5;
+  --alert-error-border: rgba(248, 113, 113, 0.38);
+  --alert-error-text: #f87171;
 
   --money-income: var(--alert-success-text);
   --money-expense: var(--alert-error-text);
+  --money-balance: #93c5fd;
 
   --bg: var(--surface-1);
   --code-bg: var(--surface-inset);
@@ -140,6 +145,7 @@
   --space-7: 40px;
   --space-8: 48px;
   --space-section: var(--space-7);
+  --page-stack-gap: var(--space-5);
 
   /* Radii — outer shell/panel → inner cards */
   --radius-sm: 6px;
@@ -157,6 +163,12 @@
   --font-size-overline: 12px;
   --font-size-caption: 14px;
   --font-size-ui: 15px;
+  /** Page subtitle under h1 — between body and caption */
+  --font-size-lead: var(--font-size-body-sm);
+  /** Panel titles and in-page section titles */
+  --font-size-panel-title: var(--font-size-section-sm);
+  /** Table and dense data column headers */
+  --font-size-table-head: var(--font-size-ui);
   --font-size-brand: 20px;
   --font-size-page-title: 32px;
   --font-size-page-title-sm: 28px;
@@ -183,6 +195,14 @@
   --letter-spacing-caption: 0.01em;
 
   --shell-max-width: 70.375rem;
+  --content-max-width: var(--shell-max-width);
+
+  /* Controls & focus (shared by buttons, inputs, nav) */
+  --control-height: 2.5rem;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--accent);
+  --transition-interactive: 0.2s ease;
 
   @media (max-width: 1024px) {
     --font-size-body: var(--font-size-body-sm);

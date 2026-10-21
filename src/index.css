@@ -1,5 +1,6 @@
 @import './ui/tokens.css';
 @import './ui/panels.css';
+@import './ui/page-banner.css';
 @import './ui/utilities.css';
 @import './ui/buttons.css';
 @import './ui/forms.css';
@@ -24,6 +25,12 @@ body {
   background: var(--surface-0);
 }
 
+@media (min-width: 901px) {
+  body {
+    overflow: hidden;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   body,
   #root,
@@ -36,18 +43,40 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .shell-sidebar {
+    transition: none;
+  }
+
+  @media (max-width: 900px) {
+    .shell-sidebar,
+    .shell-overlay {
+      transition: none;
+    }
+  }
+}
+
 #root {
-  width: min(var(--shell-max-width), 100%);
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
+  margin: 0;
   text-align: start;
-  border-inline: 1px solid var(--border);
+  border-inline: 1px solid var(--border-subtle);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background: var(--bg);
+  background: var(--surface-1);
   overflow-x: clip;
+}
+
+@media (min-width: 901px) and (max-width: 1024px) {
+  #root {
+    height: 100svh;
+    max-height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+  }
 }
 
 body.shell-nav-open {
@@ -57,10 +86,12 @@ body.shell-nav-open {
 @media (min-width: 1025px) {
   #root {
     margin-block: var(--space-4);
-    min-height: calc(100svh - var(--space-8));
+    height: calc(100svh - var(--space-8));
+    max-height: calc(100svh - var(--space-8));
+    min-height: 0;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
-    overflow: clip;
+    overflow: hidden;
   }
 }
 
@@ -100,4 +131,11 @@ code {
   line-height: 1.35;
   padding: var(--space-1) var(--space-2);
   background: var(--code-bg);
+}
+
+.shell-main > section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }

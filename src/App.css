@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: row;
   flex: 1;
+  width: 100%;
   min-height: 0;
   min-width: 0;
   text-align: left;
@@ -49,16 +50,41 @@
 
 .shell-sidebar {
   --sidebar-width: 15rem;
+  --shell-sidebar-bg: var(--text-h);
+  --shell-sidebar-border: rgb(148 163 184 / 0.2);
+  --shell-sidebar-text: rgb(203 213 225);
+  --shell-sidebar-text-hover: rgb(248 250 252);
+  --shell-sidebar-hover-bg: rgb(255 255 255 / 0.07);
+  --shell-sidebar-active-bg: var(--accent-bg);
   flex: 0 0 var(--sidebar-width);
   width: var(--sidebar-width);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-5) var(--space-4);
-  border-inline-end: 1px solid var(--border-subtle);
-  background: var(--surface-elevated);
+  border-inline-end: 1px solid var(--shell-sidebar-border);
+  background: var(--shell-sidebar-bg);
   box-sizing: border-box;
   min-height: 0;
+  color: var(--shell-sidebar-text);
+}
+
+[data-theme='dark'] .shell-sidebar {
+  --shell-sidebar-bg: var(--surface-inset);
+  --shell-sidebar-border: var(--border-subtle);
+  --shell-sidebar-text: var(--text);
+  --shell-sidebar-text-hover: var(--text-h);
+  --shell-sidebar-hover-bg: rgb(255 255 255 / 0.06);
+  --shell-sidebar-active-bg: var(--accent-bg);
+}
+
+/* Navy sidebar: lockup for dark backgrounds (both themes) */
+.shell-sidebar .brand-logo--theme-light {
+  display: none;
+}
+
+.shell-sidebar .brand-logo--theme-dark {
+  display: block;
 }
 
 .shell-sidebar-brand {
@@ -78,7 +104,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-1);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -106,18 +132,23 @@
 .shell-nav-label {
   min-width: 0;
   text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-nav-link {
   font: inherit;
   font-size: var(--font-size-ui);
   font-weight: var(--font-weight-medium);
-  color: var(--text);
+  color: var(--shell-sidebar-text, var(--text));
   background: transparent;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-3);
   min-height: 2.75rem;
+  max-width: 100%;
+  box-sizing: border-box;
   width: 100%;
   display: inline-flex;
   align-items: center;
@@ -135,8 +166,8 @@
   }
 
   &:hover:not(:disabled) {
-    color: var(--text-h);
-    background: var(--accent-bg);
+    color: var(--shell-sidebar-text-hover, var(--text-h));
+    background: var(--shell-sidebar-hover-bg, var(--accent-bg));
   }
 
   &:focus-visible {
@@ -152,24 +183,39 @@
   &[aria-current='page'] {
     color: var(--accent);
     font-weight: var(--font-weight-semibold);
-    background: var(--accent-bg);
+    background: var(--shell-sidebar-active-bg, var(--accent-bg));
     border-color: transparent;
     box-shadow: inset 3px 0 0 var(--accent);
   }
 
   &[aria-current='page']:hover:not(:disabled) {
     color: var(--accent);
-    background: var(--accent-bg);
+    background: var(--shell-sidebar-active-bg, var(--accent-bg));
   }
+}
+
+.shell-sidebar .shell-nav-link[aria-current='page'] {
+  color: var(--shell-sidebar-text-hover);
+}
+
+.shell-sidebar .shell-nav-link[aria-current='page'] .shell-nav-icon {
+  color: var(--accent);
+}
+
+.shell-sidebar .shell-nav-link[aria-current='page']:hover:not(:disabled) {
+  color: var(--shell-sidebar-text-hover);
 }
 
 /* —— Main content —— */
 
 .shell-main {
   flex: 1;
+  width: 100%;
   min-width: 0;
+  min-height: 0;
   padding: var(--space-6);
-  background: var(--bg);
+  background: var(--surface-1);
+  box-sizing: border-box;
 
   @media (max-width: 1024px) {
     padding: var(--space-5);
@@ -177,6 +223,22 @@
 
   @media (max-width: 480px) {
     padding: var(--space-4) var(--space-4) var(--space-5);
+  }
+}
+
+@media (min-width: 901px) {
+  .shell {
+    overflow: hidden;
+  }
+
+  .shell-sidebar {
+    align-self: stretch;
+    overflow: hidden;
+  }
+
+  .shell-main {
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 
@@ -203,10 +265,10 @@
   height: 2.75rem;
   padding: 0;
   margin: 0;
-  border: 2px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-elevated);
-  color: var(--text);
+  color: var(--text-h);
   cursor: pointer;
 
   @media (prefers-reduced-motion: no-preference) {
@@ -244,8 +306,8 @@
     flex-shrink: 0;
     min-width: 0;
     padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
   }
 
   .shell-mobile-bar-brand .brand-lockup {
@@ -274,7 +336,7 @@
     height: 100%;
     max-height: 100dvh;
     flex: none;
-    border-inline-end: 1px solid var(--border-subtle);
+    border-inline-end: 1px solid var(--shell-sidebar-border);
     box-shadow: var(--shadow-md);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -294,7 +356,7 @@
     position: fixed;
     z-index: 90;
     inset: 0;
-    background: rgb(15 23 42 / 0.45);
+    background: color-mix(in srgb, var(--text-h) 42%, transparent);
     opacity: 0;
     pointer-events: none;
 
@@ -309,7 +371,7 @@
   }
 
   [data-theme='dark'] .shell-overlay {
-    background: rgb(0 0 0 / 0.55);
+    background: color-mix(in srgb, var(--surface-0) 72%, transparent);
   }
 
   .shell-sidebar .brand-logo--lockup {

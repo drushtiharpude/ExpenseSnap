@@ -1,15 +1,21 @@
 import { useState } from 'react'
+import { readBudgets } from '../data/budgetStore.js'
 import { readCategories } from '../data/categoryStore.js'
 import { readTransactions } from '../data/transactionStore.js'
-import { categoryLabel } from '../transactions/categories.js'
+import { categoryLabel, PREDEFINED_CATEGORIES } from '../transactions/categories.js'
 import { formatInrFromPaise } from '../transactions/money.js'
 import {
   buildAnalyticsInsights,
+  buildSavingSuggestions,
   defaultAnalyticsMonth,
   listTransactionMonths,
   monthlyExpenseSeries,
   summarizeForMonth,
 } from './analyze.js'
+import PageHeader from '../ui/PageHeader.jsx'
+import { PAGE_TAGLINES } from '../ui/pageHeaderCopy.js'
+import { CategoryExpenseIcon } from '../ui/shellIcons.jsx'
+import { budgetStatusForMonth, buildBudgetInsights } from './budgetStatus.js'
 import './finance.css'
 
 const CHART_COLORS = [
@@ -47,7 +53,6 @@ function monthLabel(month) {
   )
 }
 
-/** Compact x-axis label: month only when every bar is in the same calendar year. */
 function chartMonthLabel(month, monthKeys) {
   const [year, monthNumber] = month.split('-').map(Number)
   const monthOnly = new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(
@@ -58,19 +63,40 @@ function chartMonthLabel(month, monthKeys) {
   return `${monthOnly} ${String(year).slice(-2)}`
 }
 
-function CategoryExpenseChart({ categories, customCategories, chartId }) {
+function hasBuiltInCategoryIcon(categoryId) {
+  return PREDEFINED_CATEGORIES.some((category) => category.id === categoryId)
+}
+
+function compareBarWidth(paise, otherPaise) {
+  const max = Math.max(paise, otherPaise, 1)
+  return Math.max(4, Math.round((paise / max) * 100))
+}
+
+function CategoryExpenseChart({ categories, customCategories, chartId, monthKey }) {
   if (categories.length === 0) {
-    return <p className="empty-state">No expenses in this month to chart by category.</p>
+    return (
+      <div className="analytics-empty analytics-empty--inline">
+        <p className="analytics-empty-title">No expenses this month</p>
+        <p className="analytics-empty-body">
+          There are no expense transactions in {monthLabel(monthKey)} to compare by category. Try
+          another month or add expenses from Transactions.
+        </p>
+      </div>
+    )
   }
 
   const total = categories.reduce((sum, item) => sum + item.amountPaise, 0)
   const max = categories[0]?.amountPaise ?? 1
 
   return (
-    <div className="analytics-chart-block analytics-chart-panel">
+    <div className="analytics-chart-block">
+      <p className="analytics-chart-lead">
+        Each bar shows how much of {monthLabel(monthKey)} spending went to that category.
+        Amounts and percentages are listed beside every bar and in the table below.
+      </p>
       <figure className="category-chart" aria-labelledby={`${chartId}-title`}>
         <figcaption id={`${chartId}-title`} className="visually-hidden">
-          Expense distribution by category
+          Expense distribution by category for {monthLabel(monthKey)}
         </figcaption>
         <ul className="category-bars">
           {categories.map((category, index) => {
@@ -78,13 +104,28 @@ function CategoryExpenseChart({ categories, customCategories, chartId }) {
             const width = `${Math.max(4, Math.round((category.amountPaise / max) * 100))}%`
             const share =
               total > 0 ? ((category.amountPaise / total) * 100).toFixed(1) : null
+            const showIcon = hasBuiltInCategoryIcon(category.categoryId)
             return (
               <li key={category.categoryId}>
-                <span className="category-bar-label">{label}</span>
+                <span className="category-bar-label">
+                  {showIcon ? (
+                    <span className="category-bar-icon" aria-hidden="true">
+                      <CategoryExpenseIcon categoryId={category.categoryId} />
+                    </span>
+                  ) : null}
+                  <span className="category-bar-label-text">
+                    {label}
+                    {share !== null ? (
+                      <span className="category-bar-share-inline"> · {share}%</span>
+                    ) : null}
+                  </span>
+                </span>
                 <div
                   className="category-bar-track"
-                  role="presentation"
-                  aria-hidden="true"
+                  role="img"
+                  aria-label={`${label}: ${formatInrFromPaise(category.amountPaise)}${
+                    share !== null ? `, ${share} percent of month expenses` : ''
+                  }`}
                 >
                   <div
                     className="category-bar-fill"
@@ -107,7 +148,7 @@ function CategoryExpenseChart({ categories, customCategories, chartId }) {
         </ul>
       </figure>
       <table className="analytics-data-table">
-        <caption>Category amounts for this chart</caption>
+        <caption>Category amounts for {monthLabel(monthKey)}</caption>
         <thead>
           <tr>
             <th scope="col">Category</th>
@@ -139,7 +180,52 @@ function CategoryExpenseChart({ categories, customCategories, chartId }) {
 
 function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
   if (months.length === 0) {
-    return <p className="empty-state">No expense history to compare across months yet.</p>
+    return (
+      <div className="analytics-empty analytics-empty--inline">
+        <p className="analytics-empty-title">Not enough expense history</p>
+        <p className="analytics-empty-body">
+          Monthly trends need at least one expense transaction. When you have expenses across more
+          than one month, bars will compare totals side by side.
+        </p>
+      </div>
+    )
+  }
+
+  if (months.length === 1) {
+    const only = months[0]
+    return (
+      <div className="analytics-chart-block">
+        <p className="analytics-chart-lead">
+          You only have expenses recorded in one month so far. Add transactions in another month to
+          see how spending changes over time.
+        </p>
+        <p className="analytics-single-month-stat">
+          <span className="analytics-single-month-label">{monthLabel(only.month)}</span>
+          <span className="analytics-single-month-value amount amount--expense">
+            {formatInrFromPaise(only.expensePaise)} in expenses
+          </span>
+        </p>
+        <table className="analytics-data-table">
+          <caption>Monthly expense total</caption>
+          <thead>
+            <tr>
+              <th scope="col">Month</th>
+              <th scope="col" className="col-amount">
+                Expenses
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{monthLabel(only.month)}</td>
+              <td className="amount amount--expense col-amount">
+                {formatInrFromPaise(only.expensePaise)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
   }
 
   const max = Math.max(...months.map((item) => item.expensePaise))
@@ -155,7 +241,19 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
   const monthKeys = months.map((item) => item.month)
 
   return (
-    <div className="analytics-chart-block analytics-chart-panel">
+    <div className="analytics-chart-block">
+      <p className="analytics-chart-lead">
+        Taller bars mean higher total expenses that month. The highlighted bar matches the month you
+        selected above; other bars use a neutral tone. Amounts on the bars show when there is room.
+      </p>
+      {highlightMonth && (
+        <p className="analytics-chart-legend">
+          <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--selected" />
+          Selected month ({monthLabel(highlightMonth)})
+          <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--other" />
+          Other months
+        </p>
+      )}
       <div className="monthly-chart-scroll">
         <figure aria-labelledby={`${chartId}-monthly-title`}>
           <figcaption id={`${chartId}-monthly-title`} className="visually-hidden">
@@ -167,7 +265,7 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
             viewBox={`0 0 ${chartWidth} ${plotBottom + labelBand}`}
             width={chartWidth}
             height={plotBottom + labelBand}
-            aria-describedby={`${chartId}-monthly-table`}
+            aria-describedby={`${chartId}-monthly-summary`}
           >
             <title>Monthly expense comparison</title>
             <line
@@ -184,20 +282,25 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
               const labelX = slotX + slotWidth / 2
               const y = plotBottom - barHeight
               const showAmount = barHeight >= 28 && item.expensePaise > 0 && slotWidth >= 52
+              const isSelected = highlightMonth && item.month === highlightMonth
               return (
-                <g key={item.month}>
+                <g
+                  key={item.month}
+                  role="img"
+                  aria-label={`${monthLabel(item.month)}: ${formatInrFromPaise(item.expensePaise)} in expenses${
+                    isSelected ? ', selected month' : ''
+                  }`}
+                >
                   <rect
                     x={x}
                     y={y}
                     width={barWidth}
                     height={barHeight}
                     rx="4"
-                    fill={
-                      highlightMonth && item.month === highlightMonth
-                        ? 'var(--chart-2)'
-                        : 'var(--chart-8)'
-                    }
-                    className="monthly-chart-bar"
+                    fill={isSelected ? 'var(--chart-2)' : 'var(--chart-8)'}
+                    className={`monthly-chart-bar${
+                      isSelected ? ' monthly-chart-bar--selected' : ''
+                    }`}
                   />
                   {showAmount && (
                     <text
@@ -213,7 +316,9 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
                     x={labelX}
                     y={plotBottom + 16}
                     textAnchor="middle"
-                    className="monthly-chart-label"
+                    className={`monthly-chart-label${
+                      isSelected ? ' monthly-chart-label--selected' : ''
+                    }`}
                   >
                     {chartMonthLabel(item.month, monthKeys)}
                   </text>
@@ -223,25 +328,17 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
           </svg>
         </figure>
       </div>
-      <table id={`${chartId}-monthly-table`} className="analytics-data-table">
-        <caption>Monthly expense totals for this chart</caption>
-        <thead>
-          <tr>
-            <th scope="col">Month</th>
-            <th scope="col" className="col-amount">
-              Expenses
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {months.map((item) => (
-            <tr key={item.month}>
-              <td>{monthLabel(item.month)}</td>
-              <td className="amount amount--expense col-amount">{formatInrFromPaise(item.expensePaise)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul id={`${chartId}-monthly-summary`} className="analytics-monthly-sr-summary">
+        {months.map((item) => {
+          const isSelected = highlightMonth && item.month === highlightMonth
+          return (
+            <li key={item.month}>
+              {monthLabel(item.month)}: {formatInrFromPaise(item.expensePaise)} in expenses
+              {isSelected ? ' (selected month)' : ''}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -254,10 +351,46 @@ function formatInsight(insight, customCategories, monthKey) {
   if (insight.id === 'expense-vs-previous') {
     const previous = monthLabel(insight.previousMonth)
     const current = monthLabel(monthKey)
+    const amount = formatInrFromPaise(Math.abs(insight.diffPaise))
+    const percentPart =
+      typeof insight.percentChange === 'number'
+        ? ` (${insight.percentChange > 0 ? '+' : ''}${insight.percentChange}%)`
+        : ''
     if (insight.diffPaise > 0) {
-      return `Expenses in ${current} were ${formatInrFromPaise(insight.diffPaise)} higher than ${previous}.`
+      return `Expenses in ${current} were ${amount} higher than ${previous}${percentPart}.`
     }
-    return `Expenses in ${current} were ${formatInrFromPaise(-insight.diffPaise)} lower than ${previous}.`
+    return `Expenses in ${current} were ${amount} lower than ${previous}${percentPart}.`
+  }
+  if (insight.id.startsWith('category-mom-up:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    const previous = monthLabel(insight.previousMonth)
+    return `${label} spending rose by ${formatInrFromPaise(insight.deltaPaise)} compared with ${previous}.`
+  }
+  if (insight.id.startsWith('budget-exceeded:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    return `${label} is over its ${monthLabel(monthKey)} budget by ${formatInrFromPaise(insight.overPaise)}.`
+  }
+  if (insight.id.startsWith('budget-approaching:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    if (insight.atLimit) {
+      return `${label} is at its ${monthLabel(monthKey)} budget limit.`
+    }
+    return `${label} has used ${insight.percentUsed}% of its ${monthLabel(monthKey)} budget (${formatInrFromPaise(insight.remainingPaise)} remaining).`
+  }
+  if (insight.id.startsWith('suggestion-budget-exceeded:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    return `Slow ${label} spending to move back under your ${monthLabel(monthKey)} budget (currently over by ${formatInrFromPaise(insight.overPaise)}).`
+  }
+  if (insight.id.startsWith('suggestion-budget-approaching:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    if (insight.atLimit) {
+      return `${label} is at its budget limit for ${monthLabel(monthKey)}; new spending will exceed the budget.`
+    }
+    return `Watch ${label} spending in ${monthLabel(monthKey)} (${insight.percentUsed}% of budget used, ${formatInrFromPaise(insight.remainingPaise)} left).`
+  }
+  if (insight.id.startsWith('suggestion-mom-up:')) {
+    const label = categoryLabel(insight.categoryId, customCategories)
+    return `${label} spending increased ${formatInrFromPaise(insight.deltaPaise)} versus last month; review recent ${label.toLowerCase()} expenses.`
   }
   if (insight.id === 'month-net') {
     if (insight.netPaise >= 0) {
@@ -286,8 +419,37 @@ function AnalyticsSection() {
     monthOptions.includes(selectedMonth) ? selectedMonth : defaultAnalyticsMonth(records ?? [])
   const monthSummary = records === null ? null : summarizeForMonth(records, activeMonth)
   const expenseSeries = records === null ? null : monthlyExpenseSeries(records)
-  const insights =
+  const transactionInsights =
     records === null || !monthSummary?.ok ? [] : buildAnalyticsInsights(records, activeMonth)
+  let smartInsights = transactionInsights
+  if (
+    !categoryState.error &&
+    records !== null &&
+    monthSummary?.ok &&
+    records.length > 0
+  ) {
+    const budgetRead = readBudgets(undefined, { customCategories: categoryState.categories })
+    if (budgetRead.ok) {
+      const budgetStatus = budgetStatusForMonth(
+        budgetRead.budgets,
+        records,
+        activeMonth,
+        categoryState.categories,
+      )
+      if (budgetStatus.ok) {
+        const budgetInsights = buildBudgetInsights(budgetStatus)
+        const savingSuggestions = buildSavingSuggestions(budgetStatus, transactionInsights)
+        smartInsights = [...transactionInsights, ...budgetInsights, ...savingSuggestions]
+      }
+    }
+  }
+
+  const insightLines = smartInsights
+    .map((insight) => ({
+      id: insight.id,
+      text: formatInsight(insight, categoryState.categories, activeMonth),
+    }))
+    .filter((item) => item.text)
 
   function retry() {
     const result = readTransactions()
@@ -305,12 +467,48 @@ function AnalyticsSection() {
         ? 'metric-card--positive'
         : ''
 
+  const incomeBarWidth =
+    monthSummary?.ok ? compareBarWidth(monthSummary.incomePaise, monthSummary.expensePaise) : 0
+  const expenseBarWidth =
+    monthSummary?.ok ? compareBarWidth(monthSummary.expensePaise, monthSummary.incomePaise) : 0
+
   return (
     <section className="finance analytics" aria-labelledby="section-title">
-      <header className="finance-header">
-        <h1 id="section-title">Analytics</h1>
-        <p className="finance-lead">Charts and insights come from saved transactions only.</p>
-      </header>
+      <PageHeader
+        icon="analytics"
+        variant="hero"
+        title="Analytics"
+        tagline={PAGE_TAGLINES.analytics}
+        description="Patterns from your saved transactions. Pick a month to explore—limits and edits live on Budgets."
+      >
+        {records !== null && !loadError && (
+          <div className="page-banner__toolbar">
+            <label className="page-banner__field" htmlFor="analytics-month">
+              Viewing month
+              <select
+                id="analytics-month"
+                value={activeMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                disabled={monthOptions.length === 0}
+              >
+                {monthOptions.length === 0 ? (
+                  <option value={activeMonth}>{monthLabel(activeMonth)}</option>
+                ) : (
+                  monthOptions.map((month) => (
+                    <option key={month} value={month}>
+                      {monthLabel(month)}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          </div>
+        )}
+      </PageHeader>
+
+      <p className="analytics-budgets-note" role="note">
+        To set or change monthly category limits, open <strong>Budgets</strong> in the menu.
+      </p>
 
       {categoryState.error && (
         <div className="form-alert" role="alert">
@@ -346,32 +544,14 @@ function AnalyticsSection() {
 
       {records !== null && !loadError && (
         <>
-          <div className="finance-panel analytics-toolbar">
-            <label htmlFor="analytics-month">
-              Month
-              <select
-                id="analytics-month"
-                value={activeMonth}
-                onChange={(event) => setSelectedMonth(event.target.value)}
-                disabled={monthOptions.length === 0}
-              >
-                {monthOptions.length === 0 ? (
-                  <option value={activeMonth}>{monthLabel(activeMonth)}</option>
-                ) : (
-                  monthOptions.map((month) => (
-                    <option key={month} value={month}>
-                      {monthLabel(month)}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
-          </div>
-
           {records.length === 0 && (
-            <p className="empty-state">
-              No saved transactions yet. Add income and expenses to see analytics.
-            </p>
+            <div className="analytics-empty analytics-empty--page">
+              <h2 className="analytics-empty-title">No data to analyze yet</h2>
+              <p className="analytics-empty-body">
+                Add income and expense transactions first. Analytics will summarize spending by
+                category, compare months, and surface insights when there is enough history.
+              </p>
+            </div>
           )}
 
           {monthSummary && !monthSummary.ok && (
@@ -381,67 +561,143 @@ function AnalyticsSection() {
           )}
 
           {monthSummary?.ok && records.length > 0 && (
-            <>
-              <section className="finance-panel" aria-labelledby="analytics-month-summary">
-                <h2 id="analytics-month-summary">{monthLabel(activeMonth)}</h2>
-                <dl className="metric-grid metric-grid--overview">
-                  <div className={`metric-card metric-card--net ${netTone}`.trim()}>
-                    <dt>Net balance</dt>
-                    <dd className="metric-value">{formatInrFromPaise(monthSummary.netPaise)}</dd>
+            <div className="analytics-stack">
+              <section
+                className="dashboard-block analytics-summary-panel"
+                aria-labelledby="analytics-month-summary"
+              >
+                <header className="section-head section-head--in-panel">
+                  <h2 id="analytics-month-summary" className="section-head__title">
+                    {monthLabel(activeMonth)} at a glance
+                  </h2>
+                  <p className="section-head__sub">
+                    Net cash flow and how income compares to spending this month
+                  </p>
+                </header>
+                <div className="analytics-snapshot-grid">
+                  <article
+                    className={`analytics-net-card ${netTone}`.trim()}
+                    aria-labelledby="analytics-net-label"
+                  >
+                    <p id="analytics-net-label" className="analytics-net-label">
+                      Net cash flow
+                    </p>
+                    <p className="analytics-net-value amount--balance">
+                      {formatInrFromPaise(monthSummary.netPaise)}
+                    </p>
+                    <p className="analytics-net-detail">
+                      {monthSummary.netPaise > 0
+                        ? 'Income exceeded expenses this month.'
+                        : monthSummary.netPaise < 0
+                          ? 'Expenses exceeded income this month.'
+                          : 'Income and expenses balanced this month.'}
+                    </p>
+                  </article>
+                  <div
+                    className="analytics-flow-compare"
+                    role="group"
+                    aria-label={`Income and expenses for ${monthLabel(activeMonth)}`}
+                  >
+                    <div className="analytics-flow-row">
+                      <div className="analytics-flow-label">
+                        <span>Income</span>
+                        <span className="amount amount--income">
+                          {formatInrFromPaise(monthSummary.incomePaise)}
+                        </span>
+                      </div>
+                      <div className="analytics-flow-track">
+                        <div
+                          className="analytics-flow-fill analytics-flow-fill--income"
+                          style={{ width: `${incomeBarWidth}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="analytics-flow-row">
+                      <div className="analytics-flow-label">
+                        <span>Expenses</span>
+                        <span className="amount amount--expense">
+                          {formatInrFromPaise(monthSummary.expensePaise)}
+                        </span>
+                      </div>
+                      <div className="analytics-flow-track">
+                        <div
+                          className="analytics-flow-fill analytics-flow-fill--expense"
+                          style={{ width: `${expenseBarWidth}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="metric-card metric-card--secondary metric-card--income">
-                    <dt>Income</dt>
-                    <dd className="metric-value amount--income">
-                      {formatInrFromPaise(monthSummary.incomePaise)}
-                    </dd>
-                  </div>
-                  <div className="metric-card metric-card--secondary metric-card--expense">
-                    <dt>Expenses</dt>
-                    <dd className="metric-value amount--expense">
-                      {formatInrFromPaise(monthSummary.expensePaise)}
-                    </dd>
-                  </div>
-                </dl>
+                </div>
               </section>
 
-              {insights.length > 0 && (
-                <section className="finance-panel" aria-labelledby="analytics-insights-title">
-                  <h2 id="analytics-insights-title">Insights</h2>
-                  <ul className="analytics-insights">
-                    {insights.map((insight) => {
-                      const text = formatInsight(insight, categoryState.categories, activeMonth)
-                      if (!text) return null
-                      return <li key={insight.id}>{text}</li>
-                    })}
-                  </ul>
-                </section>
-              )}
-
-              <section className="finance-panel" aria-labelledby="analytics-distribution-title">
-                <h2 id="analytics-distribution-title">Expense distribution</h2>
-                <CategoryExpenseChart
-                  chartId="category-expense"
-                  categories={monthSummary.categories}
-                  customCategories={categoryState.categories}
-                />
-              </section>
-
-              <section className="finance-panel" aria-labelledby="analytics-monthly-title">
-                <h2 id="analytics-monthly-title">Monthly expense comparison</h2>
-                {expenseSeries && !expenseSeries.ok && (
-                  <div className="form-alert" role="alert">
-                    <p>Monthly comparisons cannot be calculated from the saved transactions.</p>
-                  </div>
-                )}
-                {expenseSeries?.ok && (
-                  <MonthlyExpenseChart
-                    chartId="monthly-expense"
-                    months={expenseSeries.months}
-                    highlightMonth={activeMonth}
+              <div className="analytics-charts-grid">
+                <section
+                  className="finance-panel analytics-chart-section"
+                  aria-labelledby="analytics-distribution-title"
+                >
+                  <header className="section-head section-head--in-panel">
+                    <h2 id="analytics-distribution-title" className="section-head__title">
+                      Spending by category
+                    </h2>
+                    <p className="section-head__sub">
+                      Where your expense money went in {monthLabel(activeMonth)}
+                    </p>
+                  </header>
+                  <CategoryExpenseChart
+                    chartId="category-expense"
+                    categories={monthSummary.categories}
+                    customCategories={categoryState.categories}
+                    monthKey={activeMonth}
                   />
+                </section>
+
+                <section
+                  className="finance-panel analytics-chart-section"
+                  aria-labelledby="analytics-monthly-title"
+                >
+                  <header className="section-head section-head--in-panel">
+                    <h2 id="analytics-monthly-title" className="section-head__title">
+                      Expense trend by month
+                    </h2>
+                    <p className="section-head__sub">Total expenses each month you have recorded</p>
+                  </header>
+                  {expenseSeries && !expenseSeries.ok && (
+                    <div className="form-alert" role="alert">
+                      <p>Monthly comparisons cannot be calculated from the saved transactions.</p>
+                    </div>
+                  )}
+                  {expenseSeries?.ok && (
+                    <MonthlyExpenseChart
+                      chartId="monthly-expense"
+                      months={expenseSeries.months}
+                      highlightMonth={activeMonth}
+                    />
+                  )}
+                </section>
+
+                {insightLines.length > 0 && (
+                  <section
+                    className="finance-panel analytics-insights-panel"
+                    aria-labelledby="analytics-insights-title"
+                  >
+                    <header className="section-head section-head--in-panel">
+                      <h2 id="analytics-insights-title" className="section-head__title">
+                        What stands out
+                      </h2>
+                      <p className="section-head__sub">
+                        Short notes from your saved data for {monthLabel(activeMonth)}
+                        {!categoryState.error ? ' (including budget status when available)' : ''}
+                      </p>
+                    </header>
+                    <ul className="analytics-insights">
+                      {insightLines.map((item) => (
+                        <li key={item.id}>{item.text}</li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
-              </section>
-            </>
+              </div>
+            </div>
           )}
         </>
       )}

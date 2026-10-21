@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react'
 import { createCategory, renameCategory } from '../data/category.js'
+import { readBudgets } from '../data/budgetStore.js'
+import { readRecurringBills } from '../data/recurringBillStore.js'
 import { readCategories, saveCategories } from '../data/categoryStore.js'
 import { readTransactions } from '../data/transactionStore.js'
 import { PREDEFINED_CATEGORIES } from '../transactions/categories.js'
+import PageHeader from '../ui/PageHeader.jsx'
+import { PAGE_TAGLINES } from '../ui/pageHeaderCopy.js'
 import BackupRestoreSection from './BackupRestoreSection.jsx'
 import ThemeSection from './ThemeSection.jsx'
 import './CategoriesSection.css'
@@ -26,7 +30,43 @@ function readCategoryState() {
   return { categories: null, error: result }
 }
 
-function CategoriesSection() {
+function recurringBillDeleteBlock(categoryId, customCategories) {
+  const bills = readRecurringBills(undefined, { customCategories })
+  if (!bills.ok) {
+    return {
+      blocked: true,
+      message: `${storageErrorMessage(bills, 'recurring bills')} This category was not deleted.`,
+    }
+  }
+  if (bills.bills.some((bill) => bill.categoryId === categoryId)) {
+    return {
+      blocked: true,
+      message:
+        'This category is used by a recurring bill, so it was not deleted. Remove or change that bill first.',
+    }
+  }
+  return { blocked: false, message: null }
+}
+
+function budgetDeleteBlock(categoryId, customCategories) {
+  const budgets = readBudgets(undefined, { customCategories })
+  if (!budgets.ok) {
+    return {
+      blocked: true,
+      message: `${storageErrorMessage(budgets, 'monthly budgets')} This category was not deleted.`,
+    }
+  }
+  if (budgets.budgets.some((budget) => budget.categoryId === categoryId)) {
+    return {
+      blocked: true,
+      message:
+        'This category is used by a monthly budget, so it was not deleted. Remove or change that budget first.',
+    }
+  }
+  return { blocked: false, message: null }
+}
+
+function CategoriesSection({ onStorageRestored }) {
   const [storageState, setStorageState] = useState(readCategoryState)
   const [draft, setDraft] = useState({ name: '', type: 'expense' })
   const [formErrors, setFormErrors] = useState([])
@@ -137,6 +177,16 @@ function CategoriesSection() {
       setActionError('This category is used by saved transactions, so it was not deleted.')
       return
     }
+    const categoriesForBudgetCheck = readCategories()
+    const budgetBlock = budgetDeleteBlock(
+      category.id,
+      categoriesForBudgetCheck.ok ? categoriesForBudgetCheck.categories : [],
+    )
+    if (budgetBlock.blocked) {
+      setPendingDeleteId(null)
+      setActionError(budgetBlock.message)
+      return
+    }
     setActionError(null)
     setPendingDeleteId(category.id)
   }
@@ -165,6 +215,20 @@ function CategoriesSection() {
       finish()
       return
     }
+    const recurringBlock = recurringBillDeleteBlock(category.id, current.categories)
+    if (recurringBlock.blocked) {
+      setActionError(recurringBlock.message)
+      setPendingDeleteId(null)
+      finish()
+      return
+    }
+    const budgetBlock = budgetDeleteBlock(category.id, current.categories)
+    if (budgetBlock.blocked) {
+      setActionError(budgetBlock.message)
+      setPendingDeleteId(null)
+      finish()
+      return
+    }
     const saved = saveCategories(current.categories.filter((item) => item.id !== category.id))
     if (!saved.ok) {
       setActionError(storageErrorMessage(saved, 'categories'))
@@ -186,9 +250,17 @@ function CategoriesSection() {
       .sort((left, right) => left.name.localeCompare(right.name))
 
     return (
-      <section className="category-group settings-panel" aria-labelledby={`${type}-categories`}>
-        <h2 id={`${type}-categories`}>{title}</h2>
-        <ul>
+      <section className="category-group" aria-labelledby={`${type}-categories`}>
+        <header className="category-group-head">
+          <h3 id={`${type}-categories`} className="category-group-title">
+            {title}
+          </h3>
+          <p className="category-group-sub">
+            Built-in names are fixed. Custom entries can be renamed or deleted when nothing references
+            them.
+          </p>
+        </header>
+        <ul className="category-list">
           {predefined.map((category) => (
             <li key={category.id} className="category-row category-row--builtin">
               <span className="category-row-name">{category.label}</span>
@@ -198,7 +270,7 @@ function CategoriesSection() {
           {custom.map((category) => (
             <li key={category.id} className="category-row category-row--custom">
               {renameId === category.id ? (
-                <>
+                <div className="category-row-rename">
                   <label>
                     Category name
                     <input
@@ -207,48 +279,53 @@ function CategoriesSection() {
                       onChange={(event) => setRenameName(event.target.value)}
                     />
                   </label>
-                  <button type="button" className="btn btn--primary" disabled={submitting} onClick={() => saveRename(category)}>
-                    Save name
-                  </button>
-                  <button type="button" className="btn" disabled={submitting} onClick={() => setRenameId(null)}>
-                    Cancel
-                  </button>
+                  <div className="category-row-actions">
+                    <button type="button" className="btn btn--primary" disabled={submitting} onClick={() => saveRename(category)}>
+                      Save name
+                    </button>
+                    <button type="button" className="btn" disabled={submitting} onClick={() => setRenameId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : pendingDeleteId === category.id ? (
+                <>
+                  <span className="category-row-name">{category.name}</span>
+                  <div className="category-row-actions category-row-actions--confirm">
+                    <p className="category-delete-prompt">Delete this unused category?</p>
+                    <button
+                      type="button"
+                      className="btn btn--danger"
+                      disabled={submitting}
+                      onClick={() => confirmDelete(category)}
+                    >
+                      Confirm delete
+                    </button>
+                    <button type="button" className="btn" disabled={submitting} onClick={() => setPendingDeleteId(null)}>
+                      Keep
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
                   <span className="category-row-name">{category.name}</span>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => {
-                      setRenameId(category.id)
-                      setRenameName(category.name)
-                      setPendingDeleteId(null)
-                      setActionError(null)
-                    }}
-                  >
-                    Rename
-                  </button>
-                  {pendingDeleteId === category.id ? (
-                    <>
-                      <span>Delete this unused category?</span>
-                      <button
-                        type="button"
-                        className="btn btn--danger"
-                        disabled={submitting}
-                        onClick={() => confirmDelete(category)}
-                      >
-                        Confirm delete
-                      </button>
-                      <button type="button" className="btn" disabled={submitting} onClick={() => setPendingDeleteId(null)}>
-                        Keep
-                      </button>
-                    </>
-                  ) : (
+                  <div className="category-row-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        setRenameId(category.id)
+                        setRenameName(category.name)
+                        setPendingDeleteId(null)
+                        setActionError(null)
+                      }}
+                    >
+                      Rename
+                    </button>
                     <button type="button" className="btn btn--danger" onClick={() => requestDelete(category)}>
                       Delete
                     </button>
-                  )}
+                  </div>
                 </>
               )}
             </li>
@@ -259,95 +336,127 @@ function CategoriesSection() {
   }
 
   return (
-    <section className="category-settings" aria-labelledby="section-title">
-      <header className="settings-header">
-        <h1 id="section-title">Settings</h1>
-        <p className="settings-lead">
-          Custom categories are saved in this browser. Built-in categories stay available.
-        </p>
-      </header>
-
-      <ThemeSection />
-
-      {storageState.error && (
-        <div className="category-alert" role="alert">
-          <p>{storageErrorMessage(storageState.error, 'categories')}</p>
-          <button type="button" className="btn" onClick={retry}>
-            Try again
-          </button>
-        </div>
-      )}
-
-      {categories === null ? null : (
-        <>
-          <form className="category-form settings-panel" onSubmit={handleAdd}>
-            <h2>Add a category</h2>
-            <fieldset className="type-toggle category-type-toggle">
-              <legend>Type</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="category-type"
-                  value="expense"
-                  checked={draft.type === 'expense'}
-                  onChange={() => setDraft((current) => ({ ...current, type: 'expense' }))}
-                />
-                Expense
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="category-type"
-                  value="income"
-                  checked={draft.type === 'income'}
-                  onChange={() => setDraft((current) => ({ ...current, type: 'income' }))}
-                />
-                Income
-              </label>
-            </fieldset>
-            <label>
-              Name
-              <input
-                name="category-name"
-                maxLength={40}
-                required
-                value={draft.name}
-                onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-              />
-            </label>
-            {formErrors.length > 0 && (
-              <div className="category-alert" role="alert">
-                {formErrors.map((error) => (
-                  <p key={error}>{error}</p>
-                ))}
-              </div>
-            )}
-            <button type="submit" className="btn btn--primary" disabled={submitting}>
-              Add category
-            </button>
-          </form>
-
-          {actionError && (
-            <div className="category-alert" role="alert">
-              <p>{actionError}</p>
-            </div>
-          )}
-
-          {renderGroup('expense', 'Expense categories')}
-          {renderGroup('income', 'Income categories')}
-        </>
-      )}
-
-      <BackupRestoreSection
-        onRestored={({ categories: restoredCategories }) => {
-          setStorageState({ categories: restoredCategories, error: null })
-          setFormErrors([])
-          setActionError(null)
-          setRenameId(null)
-          setRenameName('')
-          setPendingDeleteId(null)
-        }}
+    <section className="category-settings settings-page" aria-labelledby="section-title">
+      <PageHeader
+        icon="settings"
+        title="Settings"
+        tagline={PAGE_TAGLINES.settings}
+        description="Tune appearance, manage categories, and control backups—all stored locally in this browser unless you export a file."
       />
+
+      <div className="settings-page-stack">
+        <ThemeSection />
+
+        {storageState.error && (
+          <div className="category-alert" role="alert">
+            <p>{storageErrorMessage(storageState.error, 'categories')}</p>
+            <button type="button" className="btn" onClick={retry}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {categories === null ? null : (
+          <section className="settings-panel settings-panel--categories" aria-labelledby="settings-categories-title">
+            <header className="section-head section-head--in-panel">
+              <h2 id="settings-categories-title" className="section-head__title">
+                Categories
+              </h2>
+              <p className="section-head__sub">
+                Built-in labels cover everyday spending and income. Add custom names when you need
+                something more specific.
+              </p>
+            </header>
+
+            <div className="settings-callout settings-callout--info" role="note">
+              <p className="settings-callout-title">When delete is blocked</p>
+              <p>
+                A custom category cannot be removed while a saved transaction or monthly budget still
+                uses it. Remove or reassign those entries first—the app will explain which rule blocked
+                deletion.
+              </p>
+            </div>
+
+            <form className="category-form category-form--add" onSubmit={handleAdd}>
+              <header className="category-form-head">
+                <h3 className="category-form-title">Add a custom category</h3>
+                <p className="category-form-sub">
+                  Saved only in this browser. Names must be unique within expense or income types.
+                </p>
+              </header>
+              <div className="category-form-fields">
+                <fieldset className="type-toggle category-type-toggle">
+                  <legend>Category type</legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name="category-type"
+                      value="expense"
+                      checked={draft.type === 'expense'}
+                      onChange={() => setDraft((current) => ({ ...current, type: 'expense' }))}
+                    />
+                    Expense
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="category-type"
+                      value="income"
+                      checked={draft.type === 'income'}
+                      onChange={() => setDraft((current) => ({ ...current, type: 'income' }))}
+                    />
+                    Income
+                  </label>
+                </fieldset>
+                <label className="category-name-field">
+                  Display name
+                  <input
+                    name="category-name"
+                    maxLength={40}
+                    required
+                    placeholder="e.g. Subscriptions"
+                    value={draft.name}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, name: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              {formErrors.length > 0 && (
+                <div className="category-alert" role="alert">
+                  {formErrors.map((error) => (
+                    <p key={error}>{error}</p>
+                  ))}
+                </div>
+              )}
+              <div className="form-actions category-form-actions">
+                <button type="submit" className="btn btn--primary" disabled={submitting}>
+                  Add category
+                </button>
+              </div>
+            </form>
+
+            <div className="settings-feedback" aria-live="polite">
+              {actionError && (
+                <div className="category-alert" role="alert">
+                  <p>{actionError}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="settings-category-groups">
+              {renderGroup('expense', 'Expense categories')}
+              {renderGroup('income', 'Income categories')}
+            </div>
+          </section>
+        )}
+
+        <BackupRestoreSection
+          onRestored={() => {
+            onStorageRestored?.()
+          }}
+        />
+      </div>
     </section>
   )
 }

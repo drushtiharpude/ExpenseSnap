@@ -7,9 +7,15 @@
 .table-inset-wrap,
 .dashboard-table-wrap,
 .transaction-table-wrap {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-inset);
+}
+
+[data-theme='dark'] .transaction-table-wrap,
+[data-theme='dark'] .dashboard-table-wrap {
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
 }
 
 .data-table,
@@ -28,10 +34,10 @@
 .transaction-table td,
 .analytics-data-table th,
 .analytics-data-table td {
-  padding: var(--space-3);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .data-table th,
@@ -39,9 +45,18 @@
 .transaction-table th,
 .analytics-data-table th {
   color: var(--text-h);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-table-head);
   font-weight: var(--font-weight-semibold);
-  background: var(--surface-muted);
+  letter-spacing: var(--letter-spacing-caption);
+  background: var(--surface-inset);
+  border-bottom-color: var(--border);
+}
+
+[data-theme='dark'] .data-table th,
+[data-theme='dark'] .dashboard-table th,
+[data-theme='dark'] .transaction-table th,
+[data-theme='dark'] .analytics-data-table th {
+  background: color-mix(in srgb, var(--surface-elevated) 88%, var(--surface-inset));
 }
 
 .data-table tbody tr:last-child td,
@@ -55,7 +70,21 @@
 .dashboard-table tbody tr:hover td,
 .transaction-table tbody tr:hover td,
 .analytics-data-table tbody tr:hover td {
-  background: var(--surface-muted);
+  background: color-mix(in srgb, var(--surface-muted) 45%, transparent);
+}
+
+.data-table tbody td,
+.dashboard-table tbody td,
+.transaction-table tbody td,
+.analytics-data-table tbody td {
+  font-size: var(--font-size-ui);
+  color: var(--text-h);
+}
+
+.transaction-table tbody td:first-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .data-table .col-amount,
@@ -69,6 +98,14 @@
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.data-table .col-actions,
+.data-table th.col-actions,
+.transaction-table .col-actions,
+.transaction-table th.col-actions {
+  text-align: right;
+  white-space: nowrap;
 }
 
 .transaction-table {
@@ -87,6 +124,25 @@
   color: var(--text-h);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.amount--balance {
+  color: var(--money-balance);
+}
+
+.amount--income {
+  color: var(--money-income);
+  font-weight: var(--font-weight-semibold);
+}
+
+.amount--expense {
+  color: var(--money-expense);
+  font-weight: var(--font-weight-semibold);
+}
+
+td.amount,
+th.amount {
+  margin: 0;
 }
 
 .stat-grid dd {

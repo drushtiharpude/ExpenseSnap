@@ -21,26 +21,42 @@ function storageErrorMessage(result, noun) {
   return `This change could not be saved. Existing ${noun} were left unchanged.`
 }
 
+function formatBudgetPhrase(count) {
+  return `${count} monthly budget${count === 1 ? '' : 's'}`
+}
+
 function formatSuccessSummary(summary) {
   if (summary.mode === 'replace') {
     const recoveryPrefix = summary.recoveredFromMalformedStorage
       ? 'Recovery replace complete: unreadable local data was overwritten. '
       : ''
+    const budgetPart =
+      summary.budgetsRestored !== undefined
+        ? `, ${formatBudgetPhrase(summary.budgetsRestored)}`
+        : ''
     return `${recoveryPrefix}Restore complete: ${summary.transactionsRestored} transaction${
       summary.transactionsRestored === 1 ? '' : 's'
     } and ${summary.categoriesRestored} custom categor${
       summary.categoriesRestored === 1 ? 'y' : 'ies'
-    } replaced saved data.`
+    }${budgetPart} replaced saved data.`
   }
+  const budgetPart =
+    summary.budgetsAdded !== undefined
+      ? `, added ${formatBudgetPhrase(summary.budgetsAdded)}`
+      : ''
+  const budgetKeptPart =
+    summary.budgetsKept !== undefined
+      ? ` and kept ${formatBudgetPhrase(summary.budgetsKept)} unchanged`
+      : ''
   return `Merge complete: added ${summary.transactionsAdded} transaction${
     summary.transactionsAdded === 1 ? '' : 's'
   } and ${summary.categoriesAdded} custom categor${
     summary.categoriesAdded === 1 ? 'y' : 'ies'
-  }. Kept ${summary.transactionsKept} matching transaction${
+  }${budgetPart}. Kept ${summary.transactionsKept} matching transaction${
     summary.transactionsKept === 1 ? '' : 's'
   } and ${summary.categoriesKept} matching categor${
     summary.categoriesKept === 1 ? 'y' : 'ies'
-  } unchanged.`
+  } unchanged${budgetKeptPart}.`
 }
 
 function BackupRestoreSection({ onRestored }) {
@@ -82,14 +98,15 @@ function BackupRestoreSection({ onRestored }) {
     link.download = backupFilename(result.document.exportedAt)
     link.click()
     URL.revokeObjectURL(url)
+    const budgetCount = result.document.budgets.length
     setBackupMessage(
       result.empty
-        ? 'Downloaded a backup with no saved transactions or custom categories.'
+        ? 'Downloaded a backup with no saved transactions, custom categories, or monthly budgets.'
         : `Downloaded a backup with ${result.document.transactions.length} transaction${
             result.document.transactions.length === 1 ? '' : 's'
-          } and ${result.document.categories.length} custom categor${
+          }, ${result.document.categories.length} custom categor${
             result.document.categories.length === 1 ? 'y' : 'ies'
-          }.`,
+          }, and ${formatBudgetPhrase(budgetCount)}.`,
     )
   }
 
@@ -149,6 +166,7 @@ function BackupRestoreSection({ onRestored }) {
     onRestored?.({
       transactions: result.transactions,
       categories: result.categories,
+      budgets: result.budgets,
     })
     finish()
   }
@@ -173,18 +191,27 @@ function BackupRestoreSection({ onRestored }) {
 
   return (
     <section className="backup-restore settings-panel" aria-labelledby="backup-restore-title">
-      <h2 id="backup-restore-title">Backup and restore</h2>
-      <p>
-        Download a JSON copy of your saved transactions and custom categories, or restore one on
-        this device. Backups stay on your computer and are not uploaded.
-      </p>
+      <header className="section-head section-head--in-panel">
+        <h2 id="backup-restore-title" className="section-head__title">
+          Data &amp; backup
+        </h2>
+        <p className="section-head__sub">
+          Export a portable JSON copy or restore data on this device. Files stay on your computer and
+          are not uploaded anywhere.
+        </p>
+      </header>
 
       <div className="backup-block backup-block--export">
-        <h3 className="backup-block-title">Download backup</h3>
-        <p>Includes every saved transaction, every custom category, a format version, and export time.</p>
-        <button type="button" className="btn btn--primary" onClick={handleDownloadBackup}>
-          Download JSON backup
-        </button>
+        <h3 className="backup-block-title">Export backup</h3>
+        <p className="backup-block-lead">
+          Download a snapshot of transactions, custom categories, monthly budgets, format version,
+          and export time.
+        </p>
+        <div className="backup-block-actions">
+          <button type="button" className="btn btn--primary" onClick={handleDownloadBackup}>
+            Download JSON backup
+          </button>
+        </div>
         {backupMessage && (
           <div className="backup-alert backup-alert-success" role="status">
             <p>{backupMessage}</p>
@@ -198,9 +225,16 @@ function BackupRestoreSection({ onRestored }) {
       </div>
 
       <form className="backup-block backup-block--restore" onSubmit={handleRestoreSubmit}>
-        <h3 className="backup-block-title">Restore from backup</h3>
+        <div className="backup-restore-intro">
+          <h3 className="backup-block-title">Import backup</h3>
+          <p className="backup-block-lead">
+            Restoring changes saved data on this device. Merge is the safer default; replace removes
+            existing records first.
+          </p>
+        </div>
+
         <label className="backup-file-label">
-          Backup file
+          Choose backup file
           <input
             ref={fileInputRef}
             type="file"
@@ -210,8 +244,8 @@ function BackupRestoreSection({ onRestored }) {
         </label>
         {selectedFileName && <p className="backup-file-name">Selected: {selectedFileName}</p>}
 
-        <fieldset>
-          <legend>Restore mode</legend>
+        <fieldset className="type-toggle backup-restore-mode">
+          <legend>How should this file be applied?</legend>
           <label>
             <input
               type="radio"
@@ -243,36 +277,47 @@ function BackupRestoreSection({ onRestored }) {
         {restoreMode === 'merge' ? (
           <p className="backup-note">
             Merge adds new records by id. Matching ids must be identical; conflicting ids are
-            rejected without changing saved data.
+            rejected without changing saved data. Version 2 backups also merge monthly budgets;
+            version 3 backups also merge recurring bills. Version 1 backups leave local budgets and
+            recurring bills unchanged.
             {!restoreStorageState.mergeAllowed && restoreStorageState.recoveryReplaceNeeded && (
               <>
                 {' '}
-                Merge is not available while saved transactions or custom categories cannot be read.
-                Use Replace with a valid backup to recover.
+                Merge is not available while saved transactions, custom categories, monthly budgets,
+                or recurring bills cannot be read. Use Replace with a valid backup to recover.
               </>
             )}
           </p>
         ) : (
           <p className="backup-note">
-            Replace removes all saved transactions and custom categories before restoring the
-            backup. Built-in categories are unchanged.
+            Replace removes all saved transactions and custom categories before restoring the backup.
+            Version 2 backups also replace monthly budgets (including clearing them when the backup
+            lists none). Version 3 backups include recurring bills; older backups clear recurring
+            bills on replace. Version 1 backups leave local budgets unchanged. Built-in categories
+            are unchanged.
           </p>
         )}
 
         {pendingReplace && restoreMode === 'replace' && restoreStorageState.recoveryReplaceNeeded && (
           <div className="backup-alert alert--warning" role="alert">
             <p>
-              Saved transactions or custom categories in this browser could not be read. If you
-              continue, that unreadable local data will be overwritten by this backup.
+              Saved transactions, custom categories, monthly budgets, or recurring bills in this
+              browser could not be read. If you continue, that unreadable local data will be
+              overwritten by this backup where the backup format includes those records.
             </p>
           </div>
         )}
 
         {pendingReplace && restoreMode === 'replace' && (
           <div className="backup-alert alert--warning" role="alert">
-            <p>Replace all saved transactions and custom categories with this backup?</p>
+            <p>
+              Replace all saved transactions and custom categories with this backup
+              {parsedBackup?.includesBudgets ? ' and replace monthly budgets' : ''}
+              {parsedBackup?.includesRecurringBills ? ' and replace recurring bills' : ''}
+              {!parsedBackup?.includesRecurringBills && parsedBackup ? ' and clear recurring bills' : ''}?
+            </p>
             <div className="backup-confirm-actions">
-              <button type="submit" className="btn btn--primary" disabled={submitting || !parsedBackup}>
+              <button type="submit" className="btn btn--danger" disabled={submitting || !parsedBackup}>
                 Yes, replace saved data
               </button>
               <button
@@ -302,9 +347,24 @@ function BackupRestoreSection({ onRestored }) {
         )}
 
         {!pendingReplace && (
-          <button type="submit" className="btn btn--primary" disabled={submitting || !parsedBackup}>
-            {restoreMode === 'replace' ? 'Continue to replace' : 'Restore backup'}
-          </button>
+          <div
+            className={`backup-restore-submit${
+              restoreMode === 'replace' ? ' backup-restore-submit--destructive' : ''
+            }`}
+          >
+            {restoreMode === 'replace' && (
+              <p className="backup-restore-submit-hint" role="note">
+                Replace is destructive—you will confirm before anything is removed.
+              </p>
+            )}
+            <button
+              type="submit"
+              className={restoreMode === 'replace' ? 'btn btn--danger' : 'btn btn--primary'}
+              disabled={submitting || !parsedBackup}
+            >
+              {restoreMode === 'replace' ? 'Continue to replace…' : 'Merge backup into saved data'}
+            </button>
+          </div>
         )}
       </form>
     </section>

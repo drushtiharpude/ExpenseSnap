@@ -1,19 +1,31 @@
-.dashboard-header,
-.finance-header,
-.settings-header,
-.transactions-header {
+/* In-page section header (title + optional subtext); adopt on pages over time */
+.section-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
-.dashboard-lead,
-.finance-lead,
-.settings-lead,
-.transactions-lead {
-  color: var(--text);
+.section-head__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--font-size-panel-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-section);
+  color: var(--text-h);
+}
+
+.section-head__sub {
+  margin: 0;
   font-size: var(--font-size-ui);
-  max-width: 42rem;
+  line-height: var(--line-height-body);
+  color: var(--text);
+}
+
+.section-head--in-panel {
+  margin-bottom: 0;
 }
 
 .dashboard-block,
@@ -24,11 +36,18 @@
   flex-direction: column;
   gap: var(--space-4);
   margin: 0;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   background: var(--surface-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='dark'] .dashboard-block,
+[data-theme='dark'] .finance-panel,
+[data-theme='dark'] .settings-panel,
+[data-theme='dark'] .transaction-panel {
+  background: var(--surface-elevated);
 }
 
 .dashboard-block h2,
@@ -42,12 +61,35 @@
   margin: 0;
 }
 
+.dashboard-block > h2,
+.finance-panel > h2,
+.settings-panel > h2,
+.transaction-panel > h2 {
+  font-size: var(--font-size-panel-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-section);
+  color: var(--text-h);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dashboard-block > h3,
+.finance-panel > h3,
+.settings-panel > h3,
+.transaction-panel > h3 {
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+}
+
 .empty-state {
   margin: 0;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   text-align: center;
   color: var(--text);
   font-size: var(--font-size-ui);
+  line-height: var(--line-height-body);
   background: var(--surface-inset);
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);

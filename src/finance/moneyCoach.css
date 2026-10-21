@@ -1,0 +1,481 @@
+.finance.money-coach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.finance.money-coach .money-coach-local-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--alert-info-border);
+  background: var(--alert-info-bg);
+  color: var(--text-h);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+}
+
+.finance.money-coach .money-coach-brief-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+@media (min-width: 960px) {
+  .finance.money-coach .money-coach-brief-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.finance.money-coach .money-coach-brief-card {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+[data-theme='dark'] .finance.money-coach .money-coach-brief-card {
+  background: var(--surface-elevated);
+}
+
+.finance.money-coach .money-coach-brief-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.finance.money-coach .money-coach-brief-card__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+  color: var(--text-h);
+}
+
+[data-theme='dark'] .finance.money-coach .money-coach-brief-card__icon {
+  background: color-mix(in srgb, var(--surface-inset) 65%, var(--surface-elevated));
+}
+
+.finance.money-coach .money-coach-brief-step {
+  display: flex;
+  flex-direction: column;
+}
+
+.finance.money-coach .money-coach-brief-step__label {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-brief-step--urgent .money-coach-brief-card__icon {
+  border-color: color-mix(in srgb, var(--alert-warning-border) 55%, var(--border-subtle));
+  background: color-mix(in srgb, var(--alert-warning-bg) 75%, var(--surface-inset));
+  color: var(--alert-warning-text);
+}
+
+.finance.money-coach .money-coach-brief-step--next .money-coach-brief-card__icon {
+  color: var(--chart-2);
+}
+
+.finance.money-coach .money-coach-brief-step__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.finance.money-coach .money-coach-brief-lead {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-brief-text {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-brief-actions {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-brief-actions li + li {
+  margin-top: var(--space-2);
+}
+
+.finance.money-coach .money-coach-brief-step--urgent .money-coach-brief-lead {
+  color: var(--alert-warning-text);
+}
+
+.finance.money-coach .money-coach-highlight-budget {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.finance.money-coach .money-coach-panel--compact {
+  gap: var(--space-4);
+}
+
+.finance.money-coach .money-coach-month-label {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: var(--space-3);
+}
+
+.finance.money-coach .money-coach-metric {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-elevated);
+}
+
+.finance.money-coach .money-coach-metric dt {
+  margin: 0;
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-medium);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-metric dd {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-kpi-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-kpi);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-metric--balance {
+  border-color: var(--border);
+}
+
+.finance.money-coach .money-coach-metric--ok dd {
+  color: var(--money-income);
+}
+
+.finance.money-coach .money-coach-metric--warn dd {
+  color: var(--alert-warning-text);
+}
+
+.finance.money-coach .money-coach-insight {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--alert-warning-border) 65%, var(--border-subtle));
+  background: color-mix(in srgb, var(--alert-warning-bg) 70%, var(--surface-elevated));
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-field__input--compact {
+  min-height: 3.5rem;
+}
+
+.finance.money-coach .money-coach-actions--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.finance.money-coach .money-coach-actions--stack .btn {
+  justify-content: center;
+}
+
+.finance.money-coach .money-coach-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.finance.money-coach .money-coach-panel__title {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-panel__intro {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-panel__empty {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.finance.money-coach .money-coach-field__label {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-field__input {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.finance.money-coach .money-coach-field__hint {
+  font-size: var(--font-size-overline);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-preview-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-preview-list li + li {
+  margin-top: var(--space-2);
+}
+
+.finance.money-coach .money-coach-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-consent input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.finance.money-coach .money-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.finance.money-coach .money-coach-actions--inline {
+  margin-top: var(--space-3);
+}
+
+.finance.money-coach .money-coach-demo-badge {
+  margin: 0;
+  display: inline-flex;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caption);
+  text-transform: uppercase;
+  border: 1px solid var(--alert-warning-border);
+  background: var(--alert-warning-bg);
+  color: var(--alert-warning-text);
+}
+
+.finance.money-coach .money-coach-result-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-elevated);
+}
+
+.finance.money-coach .money-coach-result-answer__title {
+  margin: 0;
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caption);
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-result-answer__line {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-result-figures__label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-result-budget-list {
+  margin-top: var(--space-2);
+}
+
+.finance.money-coach .money-coach-result-suggestion {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--chart-2) 35%, var(--border-subtle));
+  background: color-mix(in srgb, var(--chart-2) 8%, var(--surface-elevated));
+}
+
+.finance.money-coach .money-coach-result-suggestion__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-result-suggestion__text {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-disclaimer {
+  margin: 0;
+  font-size: var(--font-size-overline);
+  line-height: var(--line-height-caption);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-panel--confirm code {
+  font-size: 0.92em;
+}
+
+.finance.money-coach .money-coach-metrics--review {
+  margin-top: var(--space-1);
+}
+
+.finance.money-coach .money-coach-details {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  padding: 0 var(--space-3);
+}
+
+.finance.money-coach .money-coach-details__summary {
+  cursor: pointer;
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+  list-style: none;
+}
+
+.finance.money-coach .money-coach-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.finance.money-coach .money-coach-details__summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--space-2);
+  color: var(--text);
+  transition: transform 0.15s ease;
+}
+
+.finance.money-coach .money-coach-details[open] .money-coach-details__summary::before {
+  transform: rotate(90deg);
+}
+
+.finance.money-coach .money-coach-details__body {
+  padding: 0 0 var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.finance.money-coach .money-coach-summary-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.finance.money-coach .money-coach-summary-preview__notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--alert-warning-border);
+  background: var(--alert-warning-bg);
+  color: var(--alert-warning-text);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+}
+
+.finance.money-coach .money-coach-summary-preview__heading {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-h);
+}
+
+.finance.money-coach .money-coach-summary-preview__meta,
+.finance.money-coach .money-coach-summary-preview__grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+
+.finance.money-coach .money-coach-summary-preview__meta dt,
+.finance.money-coach .money-coach-summary-preview__grid dt {
+  margin: 0;
+  font-size: var(--font-size-overline);
+  color: var(--text);
+}
+
+.finance.money-coach .money-coach-summary-preview__meta dd,
+.finance.money-coach .money-coach-summary-preview__grid dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .finance.money-coach .money-coach-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
