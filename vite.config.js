@@ -3,5 +3,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+plugins: [react()],
+server: {
+allowedHosts: ['expensesnap-c9h7.onrender.com'],
+},
 })
