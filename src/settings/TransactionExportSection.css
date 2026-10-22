@@ -1,0 +1,63 @@
+.transaction-export {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.transaction-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.transaction-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: center;
+  min-width: min(100%, 12rem);
+}
+
+.transaction-export-btn__icon {
+  display: flex;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.transaction-export-note {
+  margin: 0;
+  font-size: var(--font-size-caption, 0.8125rem);
+  line-height: var(--line-height-body);
+  color: var(--text);
+}
+
+.transaction-export-alert {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-body);
+  color: var(--alert-error-text);
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  border-radius: var(--radius-sm);
+}
+
+.transaction-export-alert p {
+  margin: 0;
+}
+
+.transaction-export-alert--success {
+  color: var(--alert-success-text);
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+}
+
+@media (max-width: 480px) {
+  .transaction-export-actions {
+    flex-direction: column;
+  }
+
+  .transaction-export-btn {
+    width: 100%;
+  }
+}

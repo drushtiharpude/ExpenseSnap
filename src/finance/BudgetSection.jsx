@@ -415,7 +415,10 @@ function MonthlyBudgetsPanel({ activeMonth, records, customCategories }) {
                     <div className="analytics-budget-row-header budgets-category-card-head">
                       <div className="budgets-category-title-row">
                         <span className="budgets-category-icon" aria-hidden="true">
-                          <CategoryExpenseIcon categoryId={item.categoryId} />
+                          <CategoryExpenseIcon
+                            categoryId={item.categoryId}
+                            customCategories={customCategories}
+                          />
                         </span>
                         <h4 className="analytics-budget-row-title">{item.categoryLabel}</h4>
                       </div>
@@ -634,6 +637,7 @@ function BudgetSection() {
     <section className="finance budgets" aria-labelledby="section-title">
       <PageHeader
         icon="budgets"
+        variant="standard"
         title="Budgets"
         tagline={PAGE_TAGLINES.budgets}
         description="Set monthly limits by category and see what's left at a glance. Spending comes from saved expense transactions."

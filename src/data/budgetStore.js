@@ -1,3 +1,9 @@
+import {
+  readCloudBudgets,
+  readCloudBudgetsRaw,
+  saveCloudBudgets,
+} from './cloudFinanceStore.js'
+import { isCloudFinanceActive } from './financeSession.js'
 import { validateBudgets } from './budget.js'
 
 /** Plain JSON in localStorage for this browser profile. It is not encrypted. */
@@ -66,6 +72,7 @@ function parseStored(raw, customCategories) {
 }
 
 export function readBudgets(storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudBudgets()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
 
@@ -77,6 +84,7 @@ export function readBudgets(storage, options = {}) {
 
 /** Raw string for the key, or null when the key is absent. */
 export function readBudgetsStorageRaw(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudBudgetsRaw()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
   return readRaw(target)
@@ -98,6 +106,9 @@ export function restoreBudgetsStorageRaw(storage, raw) {
 }
 
 export function saveBudgets(budgets, storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) {
+    return saveCloudBudgets(budgets, options.customCategories ?? [])
+  }
   const validated = validateBudgets(budgets, options.customCategories ?? [])
   if (!validated.ok) return { ok: false, error: 'invalid', errors: validated.errors }
 

@@ -1,130 +1,181 @@
 /**
  * ExpenseSnap design tokens. Theme-specific values; legacy aliases preserved.
- * Premium dark Phase 1: navy surfaces, emerald accent, semantic money tokens; light theme preserved.
+ * Soft muted palettes for light and dark themes; semantic money and chart tokens.
  */
 
 :root,
 [data-theme='light'] {
   color-scheme: light;
 
-  /* Surfaces — canvas (0) → app/card (1) → inset wells */
-  --surface-0: #f2f6f7;
-  --surface-1: #ffffff;
+  /* Surfaces — warm light canvas → white cards → inset panels */
+  --surface-0: #f4f5f2;
+  --surface-1: #f4f5f2;
   --surface-input: #ffffff;
-  --surface-muted: rgba(15, 118, 110, 0.06);
-  --surface-inset: #e8eef0;
+  --surface-muted: rgb(84 131 99 / 0.1);
+  --surface-inset: #eef1ec;
   --surface-elevated: #ffffff;
 
   /* Text */
-  --text: #5c6570;
-  --text-h: #0f172a;
+  --text: #68716b;
+  --text-h: #252b28;
+  --text-muted: #758077;
 
   /* Borders & elevation */
-  --border: #e2e8f0;
-  --border-subtle: #edf1f5;
-  --shadow-xs: 0 1px 1px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-md:
-    rgba(15, 23, 42, 0.08) 0 10px 15px -3px, rgba(15, 23, 42, 0.04) 0 4px 6px -2px;
-  --shadow-panel: var(--shadow-sm);
-  --shadow-card: var(--shadow-sm);
+  --border: #e0e5de;
+  --border-subtle: #e0e5de;
+  --shadow-xs: 0 1px 1px rgb(37 43 40 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(37 43 40 / 0.06);
+  --shadow-md: 0 4px 10px rgb(37 43 40 / 0.07);
+  --shadow-panel: var(--shadow-card);
+  --shadow-card: 0 1px 2px rgb(37 43 40 / 0.06);
+  --panel-edge-highlight: none;
+  --brand-ink: #252b28;
+  --brand-navy: #252b28;
+  --surface-panel-gradient: none;
+  --input-inset-shadow: none;
 
-  /* Primary accent (deep teal) — UI chrome, actions, focus */
-  --accent: #0f766e;
-  --accent-bg: rgba(15, 118, 110, 0.1);
-  --accent-border: rgba(15, 118, 110, 0.45);
+  --palette-sidebar: #eaeee8;
+  --palette-border: #e0e5de;
 
-  /* Charts (independent of UI accent) */
-  --chart-1: #6366f1;
-  --chart-2: #0d9488;
-  --chart-3: #0891b2;
-  --chart-4: #059669;
-  --chart-5: #d97706;
-  --chart-6: #db2777;
-  --chart-7: #7c3aed;
-  --chart-8: #64748b;
+  /* Primary accent — sage green */
+  --accent: #548363;
+  --accent-bg: rgb(84 131 99 / 0.12);
+  --accent-border: rgb(84 131 99 / 0.38);
+
+  /* Filled primary buttons */
+  --btn-primary-fg: #ffffff;
+  --btn-primary-fg-hover: #ffffff;
+  --btn-primary-fg-disabled: #8a928c;
+  --btn-primary-border: color-mix(in srgb, var(--accent) 72%, #252b28);
+  --btn-primary-bg-disabled: color-mix(in srgb, var(--surface-inset) 70%, var(--border-subtle));
+  --btn-primary-border-disabled: var(--border-subtle);
+
+  /* Charts — sage, expense red, lavender secondary */
+  --chart-1: #827da8;
+  --chart-2: #548363;
+  --chart-3: #827da8;
+  --chart-4: #6d9478;
+  --chart-5: #9a8f72;
+  --chart-6: #b66f70;
+  --chart-7: #827da8;
+  --chart-8: #8a928c;
 
   /* Semantic alerts */
-  --alert-info-bg: rgba(8, 145, 178, 0.08);
-  --alert-info-border: rgba(8, 145, 178, 0.35);
-  --alert-info-text: #0e7490;
-  --alert-success-bg: rgba(5, 150, 105, 0.1);
-  --alert-success-border: rgba(5, 150, 105, 0.4);
-  --alert-success-text: #047857;
-  --alert-warning-bg: rgba(217, 119, 6, 0.1);
-  --alert-warning-border: rgba(217, 119, 6, 0.45);
-  --alert-warning-text: #b45309;
-  --alert-error-bg: rgba(220, 38, 38, 0.08);
-  --alert-error-border: rgba(220, 38, 38, 0.35);
-  --alert-error-text: #b91c1c;
+  --alert-info-bg: rgb(130 125 168 / 0.1);
+  --alert-info-border: rgb(130 125 168 / 0.32);
+  --alert-info-text: #827da8;
+  --alert-success-bg: rgb(84 131 99 / 0.1);
+  --alert-success-border: rgb(84 131 99 / 0.35);
+  --alert-success-text: #548363;
+  --alert-warning-bg: rgb(154 143 114 / 0.12);
+  --alert-warning-border: rgb(154 143 114 / 0.38);
+  --alert-warning-text: #8a7350;
+  --alert-error-bg: rgb(182 111 112 / 0.1);
+  --alert-error-border: rgb(182 111 112 / 0.35);
+  --alert-error-text: #b66f70;
 
-  --money-income: var(--alert-success-text);
-  --money-expense: var(--alert-error-text);
-  --money-balance: #0369a1;
+  --money-income: #548363;
+  --money-expense: #b66f70;
+  --money-balance: #827da8;
 
   /* Legacy aliases — used across section stylesheets */
   --bg: var(--surface-1);
   --code-bg: var(--surface-inset);
   --social-bg: var(--surface-muted);
   --shadow: var(--shadow-md);
-  --surface-panel: var(--surface-0);
+  --surface-panel: var(--surface-elevated);
   --surface-card: var(--surface-elevated);
+
+  /* App card/panel elevation aliases (routes + panels; Dashboard may override locally) */
+  --app-card-shadow: var(--shadow-card);
+  --app-card-edge-highlight: var(--panel-edge-highlight);
+  --app-card-border: var(--border-subtle);
+  --app-card-surface: var(--surface-elevated);
+  --app-card-radius: var(--radius-md);
+}
+
+[data-theme='light'] {
+  --card-hover-border: #d4dad2;
+  --shadow-card-hover: 0 2px 6px rgb(37 43 40 / 0.08);
+  --app-card-hover-shadow: var(--shadow-card-hover);
+  --app-card-hover-border: var(--card-hover-border);
+
+  --page-banner-hero-bg: #eef1ec;
+  --page-banner-hero-border: #e0e5de;
+  --page-banner-hero-headline: #252b28;
+  --page-banner-hero-field-label: #252b28;
+  --page-banner-hero-desc: #68716b;
+  --page-banner-hero-eyebrow: #758077;
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* Surfaces — deep navy stack (canvas → content → elevated → inset) */
-  --surface-0: #0b1120;
-  --surface-1: #0f172a;
-  --surface-input: #1e293b;
-  --surface-muted: rgba(16, 185, 129, 0.08);
-  --surface-inset: #111827;
-  --surface-elevated: #1e293b;
+  /* Surfaces — calm charcoal / slate (canvas → cards → inset) */
+  --surface-0: #171a21;
+  --surface-1: #171a21;
+  --surface-input: #282d37;
+  --surface-muted: rgb(163 191 168 / 0.12);
+  --surface-inset: #282d37;
+  --surface-elevated: #222630;
 
-  --text: #94a3b8;
-  --text-h: #f8fafc;
+  --text: #a1a7b3;
+  --text-h: #e1e4ea;
 
-  --border: rgb(148 163 184 / 0.16);
-  --border-subtle: rgb(148 163 184 / 0.09);
-  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.35);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md:
-    rgb(0 0 0 / 0.5) 0 10px 15px -3px, rgb(0 0 0 / 0.35) 0 4px 6px -2px;
-  --shadow-panel: var(--shadow-sm);
-  --shadow-card: var(--shadow-xs);
+  --border: #343a46;
+  --border-subtle: #343a46;
+  --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.22);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.24);
+  --shadow-md: 0 4px 10px rgb(0 0 0 / 0.22);
+  --shadow-panel: var(--shadow-card);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.24);
+  --panel-edge-highlight: none;
+  --brand-ink: var(--text-h);
+  --brand-navy: #171a21;
+  --surface-panel-gradient: none;
 
-  /* Primary accent — restrained emerald (UI chrome, actions, focus) */
-  --accent: #10b981;
-  --accent-bg: rgba(16, 185, 129, 0.12);
-  --accent-border: rgba(16, 185, 129, 0.32);
+  /* Primary accent — soft sage (UI chrome, actions, focus) */
+  --accent: #a3bfa8;
+  --accent-bg: rgb(163 191 168 / 0.14);
+  --accent-border: rgb(163 191 168 / 0.38);
 
-  /* Charts — distinct from UI accent; series remain distinguishable */
-  --chart-1: #818cf8;
-  --chart-2: #34d399;
-  --chart-3: #60a5fa;
-  --chart-4: #2dd4bf;
-  --chart-5: #fbbf24;
-  --chart-6: #f472b6;
-  --chart-7: #a78bfa;
-  --chart-8: #64748b;
+  --btn-primary-fg: #171a21;
+  --btn-primary-fg-hover: #171a21;
+  --btn-primary-fg-disabled: rgb(148 163 184 / 0.92);
+  --btn-primary-border: color-mix(in srgb, var(--accent) 55%, #0c1628);
+  --btn-primary-bg-disabled: rgb(148 163 184 / 0.22);
+  --btn-primary-border-disabled: rgb(148 163 184 / 0.28);
 
-  --alert-info-bg: rgba(56, 189, 248, 0.1);
-  --alert-info-border: rgba(56, 189, 248, 0.32);
-  --alert-info-text: #7dd3fc;
-  --alert-success-bg: rgba(16, 185, 129, 0.12);
-  --alert-success-border: rgba(16, 185, 129, 0.38);
-  --alert-success-text: #34d399;
-  --alert-warning-bg: rgba(251, 191, 36, 0.12);
-  --alert-warning-border: rgba(251, 191, 36, 0.4);
-  --alert-warning-text: #fcd34d;
-  --alert-error-bg: rgba(248, 113, 113, 0.12);
-  --alert-error-border: rgba(248, 113, 113, 0.38);
-  --alert-error-text: #f87171;
+  /* Charts — muted, distinguishable series */
+  --chart-1: #b7b4d8;
+  --chart-2: #a3bfa8;
+  --chart-3: #a8b8d8;
+  --chart-4: #a3bfa8;
+  --chart-5: #c4b896;
+  --chart-6: #d69a9a;
+  --chart-7: #b7b4d8;
+  --chart-8: #858d9b;
 
-  --money-income: var(--alert-success-text);
-  --money-expense: var(--alert-error-text);
-  --money-balance: #93c5fd;
+  --alert-info-bg: rgb(168 184 216 / 0.12);
+  --alert-info-border: rgb(168 184 216 / 0.32);
+  --alert-info-text: #a8b8d8;
+  --alert-success-bg: rgb(155 198 165 / 0.14);
+  --alert-success-border: rgb(155 198 165 / 0.38);
+  --alert-success-text: #a3bfa8;
+  --alert-warning-bg: rgb(196 184 150 / 0.14);
+  --alert-warning-border: rgb(196 184 150 / 0.38);
+  --alert-warning-text: #c4b896;
+  --alert-error-bg: rgb(214 154 154 / 0.14);
+  --alert-error-border: rgb(214 154 154 / 0.38);
+  --alert-error-text: #d69a9a;
+
+  --money-income: #a3bfa8;
+  --money-expense: #d69a9a;
+  --money-balance: #a8b8d8;
+
+  --text-muted: #858d9b;
+  --palette-sidebar: #1c2028;
+  --palette-border: #343a46;
 
   --bg: var(--surface-1);
   --code-bg: var(--surface-inset);
@@ -132,6 +183,9 @@
   --shadow: var(--shadow-md);
   --surface-panel: var(--surface-0);
   --surface-card: var(--surface-elevated);
+  --surface-panel-gradient: none;
+  --app-card-surface: var(--surface-elevated);
+  --input-inset-shadow: none;
 }
 
 :root {
@@ -197,12 +251,34 @@
   --shell-max-width: 70.375rem;
   --content-max-width: var(--shell-max-width);
 
+  /* Page banner — hero (do not use var(--text-h) — it becomes light in dark theme) */
+  --page-banner-hero-bg: #eef1ec;
+  --page-banner-hero-border: #e0e5de;
+  --page-banner-hero-eyebrow: #758077;
+  --page-banner-hero-headline: #252b28;
+  --page-banner-hero-desc: #68716b;
+  --page-banner-hero-field-label: #252b28;
+  --page-banner-hero-icon-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --page-banner-hero-icon-border: color-mix(in srgb, var(--accent) 35%, transparent);
+
   /* Controls & focus (shared by buttons, inputs, nav) */
   --control-height: 2.5rem;
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   --focus-ring-color: var(--accent);
   --transition-interactive: 0.2s ease;
+
+  /* Card hover lift (pointer-fine; see ui/cardHover.css) */
+  --card-hover-lift: -4px;
+  --card-hover-border: color-mix(in srgb, var(--accent) 24%, var(--border-subtle));
+  --motion-card-duration: 0.28s;
+  --motion-card-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-card-hover:
+    0 2px 4px rgba(12, 22, 40, 0.06),
+    0 10px 20px rgba(12, 22, 40, 0.08),
+    0 24px 48px -20px rgba(12, 22, 40, 0.2);
+  --app-card-hover-shadow: var(--shadow-card-hover);
+  --app-card-hover-border: var(--card-hover-border);
 
   @media (max-width: 1024px) {
     --font-size-body: var(--font-size-body-sm);
@@ -212,4 +288,19 @@
     --font-size-kpi: var(--font-size-kpi-sm);
     --font-size-kpi-hero: var(--font-size-kpi-hero-sm);
   }
+}
+
+/* After shared :root tokens — dark hero surfaces (must follow :root or hero bg loses to --text-h) */
+[data-theme='dark'] {
+  --card-hover-border: #343a46;
+  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.22);
+  --app-card-hover-shadow: var(--shadow-card-hover);
+  --app-card-hover-border: var(--card-hover-border);
+
+  --page-banner-hero-bg: #222630;
+  --page-banner-hero-border: #343a46;
+  --page-banner-hero-headline: #e1e4ea;
+  --page-banner-hero-field-label: #e1e4ea;
+  --page-banner-hero-desc: #a1a7b3;
+  --page-banner-hero-eyebrow: #858d9b;
 }

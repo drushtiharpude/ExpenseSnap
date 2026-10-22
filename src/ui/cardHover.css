@@ -1,0 +1,148 @@
+/**
+ * Shared card hover lift — outer informational cards only.
+ * Pointer-fine only; no transform on reduced motion or touch-primary devices.
+ * Dashboard KPI cards are scoped to `.finance.dashboard` (not used on other routes).
+ */
+
+/* —— Lift targets —— */
+.finance.dashboard .dashboard-kpi-card,
+.finance.dashboard .dashboard-block.dashboard-overview,
+.finance.dashboard .dashboard-chart-card,
+.finance.dashboard .dashboard-insight,
+.finance.dashboard .dashboard-budget-compact,
+.finance.dashboard .dashboard-block.dashboard-savings,
+.finance.dashboard .dashboard-block--recent,
+.metric-grid--overview .metric-card,
+.finance.analytics .analytics-net-card,
+.finance.analytics .analytics-chart-section.finance-panel,
+.finance.analytics .analytics-insights-panel,
+.finance.analytics .dashboard-block.analytics-summary-panel,
+.finance-page.savings-goals .savings-goal-card,
+.finance.budgets .budgets-category-card,
+.finance.dashboard .dashboard-savings-item,
+.transaction-panel--list {
+  transition:
+    transform var(--motion-card-duration) var(--motion-card-ease),
+    box-shadow var(--motion-card-duration) var(--motion-card-ease),
+    border-color var(--motion-card-duration) var(--motion-card-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .finance.dashboard .dashboard-kpi-card:hover,
+  .finance.dashboard .dashboard-block.dashboard-overview:hover,
+  .finance.dashboard .dashboard-chart-card:hover,
+  .finance.dashboard .dashboard-insight:hover,
+  .finance.dashboard .dashboard-budget-compact:hover,
+  .finance.dashboard .dashboard-block.dashboard-savings:hover,
+  .finance.dashboard .dashboard-block--recent:hover,
+  .metric-grid--overview .metric-card:hover,
+  .finance.analytics .analytics-net-card:hover,
+  .finance.analytics .analytics-chart-section.finance-panel:hover,
+  .finance.analytics .analytics-insights-panel:hover,
+  .finance.analytics .dashboard-block.analytics-summary-panel:hover,
+  .finance-page.savings-goals .savings-goal-card:hover,
+  .finance.budgets .budgets-category-card:hover,
+  .finance.dashboard .dashboard-savings-item:hover,
+  .transaction-panel--list:hover {
+    transform: translateY(var(--card-hover-lift));
+    border-color: var(--app-card-hover-border, var(--card-hover-border));
+    box-shadow:
+      var(--app-card-hover-shadow, var(--shadow-card-hover)),
+      var(--dashboard-edge-highlight, var(--app-card-edge-highlight, var(--panel-edge-highlight)));
+  }
+}
+
+/* Dashboard blocks keep route-local edge highlight when defined on `.finance.dashboard` */
+@media (hover: hover) and (pointer: fine) {
+  .finance.dashboard .dashboard-block.dashboard-overview:hover,
+  .finance.dashboard .dashboard-chart-card:hover,
+  .finance.dashboard .dashboard-insight:hover,
+  .finance.dashboard .dashboard-budget-compact:hover,
+  .finance.dashboard .dashboard-block.dashboard-savings:hover,
+  .finance.dashboard .dashboard-block--recent:hover {
+    box-shadow: var(--app-card-hover-shadow, var(--shadow-card-hover)), var(--dashboard-edge-highlight);
+  }
+
+  .finance.dashboard .dashboard-kpi-card:hover {
+    box-shadow:
+      var(--app-card-hover-shadow, var(--shadow-card-hover)),
+      var(--dashboard-edge-highlight, var(--app-card-edge-highlight, var(--panel-edge-highlight)));
+  }
+}
+
+/* —— Activity rows: surface feedback only (no lift — avoids list layout shift) —— */
+.finance.dashboard .dashboard-activity-item {
+  transition:
+    background-color var(--motion-card-duration) var(--motion-card-ease),
+    box-shadow var(--motion-card-duration) var(--motion-card-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-theme='dark']) .finance.dashboard .dashboard-activity-item:hover {
+    background: color-mix(in srgb, #eff6ff 55%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  [data-theme='dark'] .finance.dashboard .dashboard-activity-item:hover {
+    background: #282d37;
+    box-shadow: none;
+  }
+}
+
+/* Analytics insight rows inside panel */
+@media (hover: hover) and (pointer: fine) {
+  .finance.analytics .analytics-insights li {
+    transition:
+      border-color var(--motion-card-duration) var(--motion-card-ease),
+      box-shadow var(--motion-card-duration) var(--motion-card-ease);
+  }
+
+  .finance.analytics .analytics-insights li:hover {
+    border-color: var(--app-card-hover-border, var(--card-hover-border));
+    box-shadow: var(--shadow-xs), var(--app-card-edge-highlight, var(--panel-edge-highlight));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finance.dashboard .dashboard-kpi-card,
+  .finance.dashboard .dashboard-block.dashboard-overview,
+  .finance.dashboard .dashboard-chart-card,
+  .finance.dashboard .dashboard-insight,
+  .finance.dashboard .dashboard-budget-compact,
+  .finance.dashboard .dashboard-block.dashboard-savings,
+  .finance.dashboard .dashboard-block--recent,
+  .metric-grid--overview .metric-card,
+  .finance.analytics .analytics-net-card,
+  .finance.analytics .analytics-chart-section.finance-panel,
+  .finance.analytics .analytics-insights-panel,
+  .finance.analytics .dashboard-block.analytics-summary-panel,
+  .finance-page.savings-goals .savings-goal-card,
+  .finance.budgets .budgets-category-card,
+  .finance.dashboard .dashboard-savings-item,
+  .finance.dashboard .dashboard-activity-item,
+  .transaction-panel--list,
+  .finance.analytics .analytics-insights li {
+    transition: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .finance.dashboard .dashboard-kpi-card:hover,
+    .finance.dashboard .dashboard-block.dashboard-overview:hover,
+    .finance.dashboard .dashboard-chart-card:hover,
+    .finance.dashboard .dashboard-insight:hover,
+    .finance.dashboard .dashboard-budget-compact:hover,
+    .finance.dashboard .dashboard-block.dashboard-savings:hover,
+    .finance.dashboard .dashboard-block--recent:hover,
+    .metric-grid--overview .metric-card:hover,
+    .finance.analytics .analytics-net-card:hover,
+    .finance.analytics .analytics-chart-section.finance-panel:hover,
+    .finance.analytics .analytics-insights-panel:hover,
+    .finance.analytics .dashboard-block.analytics-summary-panel:hover,
+    .finance-page.savings-goals .savings-goal-card:hover,
+    .finance.budgets .budgets-category-card:hover,
+    .finance.dashboard .dashboard-savings-item:hover,
+    .transaction-panel--list:hover {
+      transform: none;
+    }
+  }
+}

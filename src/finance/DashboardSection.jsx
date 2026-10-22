@@ -1,15 +1,35 @@
 import { useState } from 'react'
+import { useAuth } from '../auth/AuthProvider.jsx'
+import { goalSavedBalancePaise } from '../data/savingsGoal.js'
+import { readSavingsGoals } from '../data/savingsGoalStore.js'
 import { readBudgets } from '../data/budgetStore.js'
 import { readCategories } from '../data/categoryStore.js'
 import { readTransactions } from '../data/transactionStore.js'
-import { categoryLabel, PREDEFINED_CATEGORIES } from '../transactions/categories.js'
+import { categoryLabel } from '../transactions/categories.js'
 import { formatInrFromPaise } from '../transactions/money.js'
-import PageHeader from '../ui/PageHeader.jsx'
-import { PAGE_TAGLINES } from '../ui/pageHeaderCopy.js'
-import { CategoryExpenseIcon, DashboardMetricIcon } from '../ui/shellIcons.jsx'
+import { CategoryExpenseIcon, DashboardMetricIcon, ShellNavIcon } from '../ui/shellIcons.jsx'
+import { CashFlowBarChart, CategoryDonutChart, SavingsGoalProgressRing } from './DashboardCharts.jsx'
+import { buildCategoryDonutSegments, buildDashboardCashFlow } from './dashboardVisuals.js'
+import { goalProgressPercent, summarizeSavingsGoals } from './savingsGoalProgress.js'
+import { selectPrimaryDashboardInsight, summarizeForMonth } from './analyze.js'
+import {
+  DASHBOARD_HEADER_SUBTITLE,
+  formatDashboardHeaderDate,
+  resolveDashboardGreetName,
+  timeOfDayGreeting,
+} from './dashboardGreeting.js'
+import {
+  clampDashboardMonth,
+  currentDashboardMonth,
+  dashboardNextMonth,
+  dashboardPreviousMonth,
+  hasTransactionsInMonth,
+} from './dashboardMonth.js'
+import { budgetStatusForMonth } from './budgetStatus.js'
 import { safeToSpendForMonth } from './safeToSpend.js'
 import { summarizeTransactions } from './summarize.js'
 import './finance.css'
+import './dashboardPremium.css'
 
 const SAFE_TO_SPEND_FOOTNOTE = 'Saved data only · not your bank balance'
 
@@ -43,17 +63,74 @@ function compareExpensesByDate(left, right) {
   return left.id.localeCompare(right.id)
 }
 
-function recentExpenses(transactions, limit = 5) {
-  if (!Array.isArray(transactions)) return []
+function recentExpensesInMonth(transactions, monthKey, limit = 5) {
+  if (!Array.isArray(transactions) || typeof monthKey !== 'string') return []
   return transactions
-    .filter((transaction) => transaction.type === 'expense')
+    .filter(
+      (transaction) =>
+        transaction.type === 'expense' &&
+        typeof transaction.date === 'string' &&
+        transaction.date.slice(0, 7) === monthKey,
+    )
     .sort(compareExpensesByDate)
     .slice(0, limit)
 }
 
-function compareBarWidth(paise, otherPaise) {
-  const max = Math.max(paise, otherPaise, 1)
-  return Math.max(4, Math.round((paise / max) * 100))
+function DashboardMonthToolbar({ activeMonth, currentMonth, onMonthChange }) {
+  const previous = dashboardPreviousMonth(activeMonth)
+  const next = dashboardNextMonth(activeMonth)
+  const onCurrentMonth = activeMonth === currentMonth
+
+  function handleInputChange(event) {
+    onMonthChange(clampDashboardMonth(event.target.value))
+  }
+
+  return (
+    <div className="page-banner__toolbar dashboard-month-toolbar">
+      <div className="dashboard-month-nav" role="group" aria-label="Dashboard month">
+        <div className="dashboard-month-nav__control">
+          <button
+            type="button"
+            className="dashboard-month-nav__step dashboard-month-nav__step--leading"
+            disabled={!previous}
+            aria-label="Previous month"
+            onClick={() => previous && onMonthChange(previous)}
+          >
+            ‹
+          </button>
+          <label className="dashboard-month-nav__field" htmlFor="dashboard-month">
+            <span className="visually-hidden">Viewing month</span>
+            <input
+              id="dashboard-month"
+              className="dashboard-month-nav__input"
+              type="month"
+              value={activeMonth}
+              max={currentMonth}
+              onChange={handleInputChange}
+            />
+          </label>
+          <button
+            type="button"
+            className="dashboard-month-nav__step dashboard-month-nav__step--trailing"
+            disabled={!next}
+            aria-label="Next month"
+            onClick={() => next && onMonthChange(next)}
+          >
+            ›
+          </button>
+        </div>
+        {!onCurrentMonth ? (
+          <button
+            type="button"
+            className="btn dashboard-month-nav__current"
+            onClick={() => onMonthChange(currentMonth)}
+          >
+            Current month
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 function budgetUsePercent(spentPaise, limitPaise) {
@@ -136,61 +213,38 @@ function safeToSpendPresentation(result) {
   return null
 }
 
-function categoryShareOfExpenses(amountPaise, totalExpensePaise) {
-  if (totalExpensePaise <= 0) return 0
-  return Math.round((amountPaise / totalExpensePaise) * 100)
+function DashboardKpiCard({ label, value, tone, icon, hint, role }) {
+  return (
+    <article
+      className={`dashboard-kpi-card dashboard-kpi-card--${tone}${
+        role ? ` dashboard-kpi-card--role-${role}` : ''
+      }`}
+    >
+      <span className="dashboard-kpi-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <p className="dashboard-kpi-label">{label}</p>
+      <p className={`dashboard-kpi-value ${tone}`}>{value}</p>
+      {hint ? <p className="dashboard-kpi-hint">{hint}</p> : null}
+    </article>
+  )
 }
 
-function hasBuiltInCategoryIcon(categoryId) {
-  return PREDEFINED_CATEGORIES.some((category) => category.id === categoryId)
-}
-
-function buildDashboardInsight(summary, customCategories) {
-  if (!summary?.ok) return null
-
-  const { monthExpensePaise, monthIncomePaise, month, expensePaise, categories } = summary
-  const monthNet = monthIncomePaise - monthExpensePaise
-
-  if (monthExpensePaise > 0 || monthIncomePaise > 0) {
-    if (monthExpensePaise > 0 && monthIncomePaise === 0) {
-      return {
-        title: 'This month so far',
-        body: `You have ${formatInrFromPaise(monthExpensePaise)} in expenses in ${monthLabel(month)} and no income recorded for this month yet.`,
-      }
-    }
-    if (monthNet < 0) {
-      return {
-        title: 'This month so far',
-        body: `In ${monthLabel(month)}, spending is ahead of income by ${formatInrFromPaise(-monthNet)} based on saved transactions.`,
-      }
-    }
-    if (monthExpensePaise > 0 && monthNet >= 0) {
-      return {
-        title: 'This month so far',
-        body: `In ${monthLabel(month)}, income covers expenses with ${formatInrFromPaise(monthNet)} remaining after spending.`,
-      }
-    }
-    if (monthIncomePaise > 0 && monthExpensePaise === 0) {
-      return {
-        title: 'This month so far',
-        body: `You have ${formatInrFromPaise(monthIncomePaise)} in income in ${monthLabel(month)} and no expenses recorded this month yet.`,
-      }
-    }
-  }
-
-  if (expensePaise <= 0) return null
-  const top = categories[0]
-  if (!top) return null
-  const share = categoryShareOfExpenses(top.amountPaise, expensePaise)
-  if (share < 1) return null
-  const label = categoryLabel(top.categoryId, customCategories)
-  return {
-    title: 'Where spending adds up',
-    body: `${label} is your largest expense category so far, at ${share}% of tracked spending (${formatInrFromPaise(top.amountPaise)}).`,
-  }
-}
-
-function DashboardSection({ onNavigateToBudgets }) {
+function DashboardSection({
+  headerActions,
+  mobileNav,
+  navOpen,
+  onToggleNav,
+  onNavigateToBudgets,
+  onNavigateToSavings,
+}) {
+  const { user } = useAuth()
+  const [greetingAt] = useState(() => new Date())
+  const timeGreeting = timeOfDayGreeting(greetingAt)
+  const greetName = resolveDashboardGreetName(user?.displayName, user?.username)
+  const greetingHeadline = greetName ? `${timeGreeting}, ${greetName}!` : `${timeGreeting}!`
+  const headerDateLabel = formatDashboardHeaderDate(greetingAt)
+  const headerDateIso = greetingAt.toISOString().slice(0, 10)
   const [storageState, setStorageState] = useState(readStorageState)
   const [categoryState, setCategoryState] = useState(() => {
     const result = readCategories()
@@ -198,11 +252,21 @@ function DashboardSection({ onNavigateToBudgets }) {
     return { categories: [], error: result }
   })
   const [viewedAt] = useState(() => new Date())
+  const currentMonth = currentDashboardMonth(viewedAt)
+  const [selectedMonth, setSelectedMonth] = useState(() => currentDashboardMonth(viewedAt))
+  const activeMonth = clampDashboardMonth(selectedMonth, viewedAt)
+  const savingsRead = readSavingsGoals()
+  const savingsGoals = savingsRead.ok ? savingsRead.goals : []
   const records = storageState.records
   const loadError = storageState.loadError
-  const summary = records === null ? null : summarizeTransactions(records, viewedAt)
-  const recentExpenseRows = records === null ? [] : recentExpenses(records)
-  const hasTransactions = records !== null && records.length > 0
+  const allTimeSummary = records === null ? null : summarizeTransactions(records, viewedAt)
+  const hasAnyTransactions = records !== null && records.length > 0
+  const monthSummary =
+    records !== null ? summarizeForMonth(records, activeMonth) : null
+  const hasMonthActivity =
+    records !== null && hasTransactionsInMonth(records, activeMonth)
+  const recentExpenseRows =
+    records === null ? [] : recentExpensesInMonth(records, activeMonth)
 
   function retry() {
     const result = readTransactions()
@@ -213,29 +277,62 @@ function DashboardSection({ onNavigateToBudgets }) {
     )
   }
 
-  const netTone =
-    summary?.ok && summary.netPaise < 0
-      ? 'metric-card--negative'
-      : summary?.ok && summary.netPaise > 0
-        ? 'metric-card--positive'
-        : ''
-
-  const topCategoryPaise = summary?.ok ? (summary.categories[0]?.amountPaise ?? 0) : 0
-  const totalCategoryExpense = summary?.ok ? summary.expensePaise : 0
-  const insight = summary?.ok ? buildDashboardInsight(summary, categoryState.categories) : null
-  const incomeBarWidth =
-    summary?.ok ? compareBarWidth(summary.incomePaise, summary.expensePaise) : 0
-  const expenseBarWidth =
-    summary?.ok ? compareBarWidth(summary.expensePaise, summary.incomePaise) : 0
+  let dashboardBudgetStatus = null
+  if (records !== null && monthSummary?.ok && !categoryState.error) {
+    const budgetRead = readBudgets(undefined, { customCategories: categoryState.categories })
+    if (budgetRead.ok) {
+      dashboardBudgetStatus = budgetStatusForMonth(
+        budgetRead.budgets,
+        records,
+        activeMonth,
+        categoryState.categories,
+      )
+    }
+  }
+  const insightForMonth =
+    allTimeSummary?.ok && monthSummary?.ok
+      ? {
+          ...allTimeSummary,
+          month: activeMonth,
+          monthIncomePaise: monthSummary.incomePaise,
+          monthExpensePaise: monthSummary.expensePaise,
+        }
+      : null
+  const insight =
+    insightForMonth
+      ? selectPrimaryDashboardInsight({
+          summary: insightForMonth,
+          monthSummary,
+          budgetStatus: dashboardBudgetStatus,
+          customCategories: categoryState.categories,
+        })
+      : null
+  const monthExpensePaise = monthSummary?.ok ? monthSummary.expensePaise : 0
+  const monthIncomePaise = monthSummary?.ok ? monthSummary.incomePaise : 0
+  const monthCategorySegments =
+    monthSummary?.ok
+      ? buildCategoryDonutSegments(monthSummary.categories, monthExpensePaise)
+      : []
+  const cashFlow =
+    records !== null && monthSummary?.ok
+      ? buildDashboardCashFlow(records, activeMonth, 4)
+      : { ok: false, rows: [], maxPaise: 1 }
+  const monthNetPaise = monthSummary?.ok ? monthSummary.netPaise : 0
+  const selectedMonthLabel = monthLabel(activeMonth)
+  const savingsSummary = summarizeSavingsGoals(savingsGoals)
+  const savingsProgressPercent =
+    savingsSummary.ok && savingsSummary.totalTargetPaise > 0
+      ? goalProgressPercent(savingsSummary.totalSavedPaise, savingsSummary.totalTargetPaise)
+      : null
 
   let safeToSpend = null
-  if (records !== null && summary?.ok) {
+  if (records !== null && monthSummary?.ok) {
     const budgetRead = readBudgets(undefined, { customCategories: categoryState.categories })
     safeToSpend = budgetRead.ok
       ? safeToSpendForMonth(
           records,
           budgetRead.budgets,
-          summary.month,
+          activeMonth,
           categoryState.categories,
           viewedAt,
         )
@@ -243,7 +340,7 @@ function DashboardSection({ onNavigateToBudgets }) {
   }
 
   const safePresentation =
-    safeToSpend?.ok && summary?.ok ? safeToSpendPresentation(safeToSpend) : null
+    safeToSpend?.ok && monthSummary?.ok ? safeToSpendPresentation(safeToSpend) : null
 
   const budgetProgressPercent =
     safeToSpend?.ok && safePresentation?.showBudgetProgress && safeToSpend.budgetLimitPaise > 0
@@ -257,13 +354,48 @@ function DashboardSection({ onNavigateToBudgets }) {
 
   return (
     <section className="finance dashboard" aria-labelledby="section-title">
-      <PageHeader
-        icon="dashboard"
-        variant="hero"
-        title="Dashboard"
-        tagline={PAGE_TAGLINES.dashboard}
-        description="Balance, spending patterns, and recent activity from your saved transactions."
-      />
+      <header className="dashboard-top-header">
+        <div className="dashboard-top-header__lead">
+          <div className="dashboard-top-header__date-row">
+            <span className="dashboard-top-header__date-icon" aria-hidden="true">
+              <ShellNavIcon name="calendar" />
+            </span>
+            <time className="dashboard-top-header__date" dateTime={headerDateIso}>
+              {headerDateLabel}
+            </time>
+          </div>
+          <h1 id="section-title" className="dashboard-top-header__greeting">
+            {greetingHeadline}
+          </h1>
+          <p className="dashboard-top-header__subtitle">{DASHBOARD_HEADER_SUBTITLE}</p>
+        </div>
+        <div className="dashboard-top-header__tools">
+          {mobileNav && onToggleNav ? (
+            <button
+              type="button"
+              className="shell-menu-toggle shell-app-header__menu dashboard-top-header__menu"
+              aria-controls="shell-sidebar"
+              aria-expanded={navOpen}
+              aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              onClick={onToggleNav}
+            >
+              <span className="shell-nav-icon">
+                <ShellNavIcon name="menu" />
+              </span>
+            </button>
+          ) : null}
+          {headerActions ? (
+            <div className="dashboard-top-header__notifications">{headerActions}</div>
+          ) : null}
+          {records !== null && !loadError ? (
+            <DashboardMonthToolbar
+              activeMonth={activeMonth}
+              currentMonth={currentMonth}
+              onMonthChange={(month) => setSelectedMonth(clampDashboardMonth(month, viewedAt))}
+            />
+          ) : null}
+        </div>
+      </header>
 
       {categoryState.error && (
         <div className="form-alert" role="alert">
@@ -297,13 +429,13 @@ function DashboardSection({ onNavigateToBudgets }) {
         </div>
       )}
 
-      {summary && !summary.ok && (
+      {allTimeSummary && !allTimeSummary.ok && (
         <div className="form-alert" role="alert">
           <p>These totals cannot be calculated from the saved transactions.</p>
         </div>
       )}
 
-      {summary?.ok && !hasTransactions && (
+      {allTimeSummary?.ok && !hasAnyTransactions && (
         <section className="dashboard-onboarding dashboard-block" aria-labelledby="dashboard-onboarding-title">
           <div className="dashboard-onboarding-lead">
             <span className="dashboard-onboarding-icon" aria-hidden="true">
@@ -328,307 +460,327 @@ function DashboardSection({ onNavigateToBudgets }) {
         </section>
       )}
 
-      {summary?.ok && hasTransactions && safePresentation && safeToSpend?.ok && (
-        <section
-          className={`dashboard-safe-to-spend dashboard-block dashboard-safe-to-spend--${safePresentation.cardTone}`}
-          aria-labelledby="dashboard-safe-to-spend-title"
-          aria-describedby="dashboard-safe-to-spend-desc"
-        >
-          <p id="dashboard-safe-to-spend-desc" className="visually-hidden">
-            Estimate from saved transactions and budgets in ExpenseSnap. This is not your bank or
-            wallet balance.
-          </p>
-
-          <div className="dashboard-sts-head">
-            <div className="dashboard-sts-head-lead">
-              <span className="dashboard-sts-icon" aria-hidden="true">
-                <DashboardMetricIcon name="wallet" />
-              </span>
-              <div className="dashboard-sts-head-copy">
-                <p className="dashboard-sts-eyebrow">{monthLabel(summary.month)}</p>
-                <h2 id="dashboard-safe-to-spend-title" className="dashboard-sts-title">
-                  {safePresentation.headlineLabel}
-                </h2>
-              </div>
-            </div>
-            {safeToSpend.dayOfMonth != null && safeToSpend.daysInMonth != null && (
-              <p className="dashboard-sts-period" aria-label={`Day ${safeToSpend.dayOfMonth} of ${safeToSpend.daysInMonth}`}>
-                <span className="dashboard-sts-period-day">
-                  {safeToSpend.dayOfMonth}/{safeToSpend.daysInMonth}
-                </span>
-                <span className="dashboard-sts-period-label">days</span>
-              </p>
-            )}
-          </div>
-
-          <div className="dashboard-sts-hero">
-            {safePresentation.value !== null ? (
-              <p
-                className={`dashboard-sts-amount amount${
-                  safePresentation.valueTone === 'expense' ? ' amount--expense' : ' amount--balance'
-                }`}
-              >
-                {safePresentation.valueTone === 'expense' && safePresentation.value < 0
-                  ? `−${formatInrFromPaise(-safePresentation.value)}`
-                  : formatInrFromPaise(safePresentation.value)}
-              </p>
-            ) : (
-              <p className="dashboard-sts-amount dashboard-sts-amount--empty">—</p>
-            )}
-            <span
-              className={`dashboard-sts-status dashboard-sts-status--${safePresentation.statusTone}`}
-              role="status"
+      {allTimeSummary?.ok && hasAnyTransactions && (
+        <div className="dashboard-stack dashboard-stack--v2">
+          {!hasMonthActivity ? (
+            <section
+              className="dashboard-block dashboard-month-empty"
+              aria-labelledby="dashboard-month-empty-title"
             >
-              {safePresentation.statusLabel}
-            </span>
-          </div>
-
-          {safePresentation.showBudgetProgress && safeToSpend.budgetLimitPaise > 0 && (
-            <div className="dashboard-sts-budget">
-              <div className="dashboard-sts-budget-labels">
-                <span>
-                  Spent{' '}
-                  <strong className="amount amount--expense">
-                    {formatInrFromPaise(safeToSpend.budgetSpentPaise)}
-                  </strong>
-                </span>
-                <span>
-                  Budget{' '}
-                  <strong>{formatInrFromPaise(safeToSpend.budgetLimitPaise)}</strong>
-                </span>
-              </div>
-              <div
-                className={`dashboard-sts-progress${
-                  budgetProgressOver ? ' dashboard-sts-progress--over' : ''
-                }`}
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={budgetProgressPercent}
-                aria-label={`${budgetProgressPercent}% of combined category budget used`}
-              >
-                <div
-                  className="dashboard-sts-progress-fill"
-                  style={{ width: `${budgetProgressPercent}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {(safePresentation.showIncomeMetric ||
-            safePresentation.showUnbudgetedMetric ||
-            safePresentation.showExpenseMetric) && (
-            <dl className="dashboard-sts-metrics">
-              {safePresentation.showIncomeMetric && (
-                <div>
-                  <dt>Income</dt>
-                  <dd className="amount amount--income">
-                    {formatInrFromPaise(safeToSpend.monthIncomePaise)}
-                  </dd>
-                </div>
-              )}
-              {safePresentation.showExpenseMetric && (
-                <div>
-                  <dt>Expenses</dt>
-                  <dd className="amount amount--expense">
-                    {formatInrFromPaise(safeToSpend.monthExpensePaise)}
-                  </dd>
-                </div>
-              )}
-              {safePresentation.showUnbudgetedMetric && (
-                <div>
-                  <dt>Unbudgeted</dt>
-                  <dd>{formatInrFromPaise(safeToSpend.unbudgetedExpensePaise)}</dd>
-                </div>
-              )}
-            </dl>
-          )}
-
-          <footer className="dashboard-sts-foot">
-            <p className="dashboard-sts-footnote">{SAFE_TO_SPEND_FOOTNOTE}</p>
-            {typeof onNavigateToBudgets === 'function' &&
-              (safePresentation.showBudgetCta || safePresentation.showBudgetLink) && (
-                <div className="dashboard-sts-actions">
-                  {safePresentation.showBudgetCta && (
-                    <button type="button" className="btn btn--primary" onClick={onNavigateToBudgets}>
-                      Set up budgets
-                    </button>
-                  )}
-                  {safePresentation.showBudgetLink && !safePresentation.showBudgetCta && (
-                    <button type="button" className="btn btn--primary" onClick={onNavigateToBudgets}>
-                      View budgets
-                    </button>
-                  )}
-                  {safePresentation.showBudgetLink && safePresentation.showBudgetCta && (
-                    <button type="button" className="btn" onClick={onNavigateToBudgets}>
-                      View budgets
-                    </button>
-                  )}
-                </div>
-              )}
-          </footer>
-        </section>
-      )}
-
-      {summary?.ok && hasTransactions && (
-        <div className="dashboard-stack">
-          <section className="dashboard-snapshot dashboard-block" aria-labelledby="dashboard-snapshot-title">
-            <header className="section-head section-head--in-panel">
-              <h2 id="dashboard-snapshot-title" className="section-head__title">
-                Your financial picture
+              <h2 id="dashboard-month-empty-title" className="dashboard-month-empty-title">
+                No transactions in {selectedMonthLabel}
               </h2>
-              <p className="section-head__sub">All saved transactions · updated when you add or edit entries</p>
-            </header>
-
-            <div className="dashboard-snapshot-grid">
-              <article
-                className={`dashboard-balance-anchor ${netTone}`.trim()}
-                aria-labelledby="dashboard-balance-label"
-              >
-                <p id="dashboard-balance-label" className="dashboard-balance-label">
-                  Net balance
-                </p>
-                <p className="dashboard-balance-value amount--balance">
-                  {formatInrFromPaise(summary.netPaise)}
-                </p>
-                <p className="dashboard-balance-detail">
-                  {summary.netPaise > 0
-                    ? 'You are ahead overall—income exceeds expenses.'
-                    : summary.netPaise < 0
-                      ? 'Expenses exceed income across all saved entries.'
-                      : 'Income and expenses are even across all saved entries.'}
-                </p>
-              </article>
-
-              <div
-                className="dashboard-compare"
-                role="group"
-                aria-label="Income compared with expenses, all time"
-              >
-                <div className="dashboard-compare-row">
-                  <div className="dashboard-compare-label">
-                    <span className="dashboard-compare-name">Income</span>
-                    <span className="dashboard-compare-amount amount--income">
-                      {formatInrFromPaise(summary.incomePaise)}
-                    </span>
-                  </div>
-                  <div className="dashboard-compare-track">
-                    <div
-                      className="dashboard-compare-fill dashboard-compare-fill--income"
-                      style={{ width: `${incomeBarWidth}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="dashboard-compare-row">
-                  <div className="dashboard-compare-label">
-                    <span className="dashboard-compare-name">Expenses</span>
-                    <span className="dashboard-compare-amount amount--expense">
-                      {formatInrFromPaise(summary.expensePaise)}
-                    </span>
-                  </div>
-                  <div className="dashboard-compare-track">
-                    <div
-                      className="dashboard-compare-fill dashboard-compare-fill--expense"
-                      style={{ width: `${expenseBarWidth}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="dashboard-month-compact" aria-label={`Current month: ${monthLabel(summary.month)}`}>
-              <span className="dashboard-month-compact-title">{monthLabel(summary.month)}</span>
-              <span className="dashboard-month-compact-stat">
-                <span className="dashboard-month-compact-key">Income</span>
-                <span className="dashboard-month-compact-val amount--income">
-                  {formatInrFromPaise(summary.monthIncomePaise)}
-                </span>
-              </span>
-              <span className="dashboard-month-compact-stat">
-                <span className="dashboard-month-compact-key">Expenses</span>
-                <span className="dashboard-month-compact-val amount--expense">
-                  {formatInrFromPaise(summary.monthExpensePaise)}
-                </span>
-              </span>
-            </div>
-          </section>
-
-          <section
-            className="dashboard-block dashboard-block--spending"
-            aria-labelledby="dashboard-spending-title"
-          >
-            <header className="section-head section-head--in-panel">
-              <h2 id="dashboard-spending-title" className="section-head__title">
-                Where your money goes
-              </h2>
-              <p className="section-head__sub">Expense categories by share of total spending</p>
-            </header>
-            {summary.categories.length === 0 ? (
-              <p className="dashboard-empty-inline">
-                No expenses recorded yet. Add an expense transaction to see category breakdown here.
+              <p className="dashboard-month-empty-body">
+                Nothing is dated in this month in your saved data. Choose another month above or
+                add transactions with dates in {selectedMonthLabel}.
               </p>
-            ) : (
-              <ul className="dashboard-category-list">
-                {summary.categories.map((category) => {
-                  const shareWidth =
-                    topCategoryPaise > 0
-                      ? Math.max(4, Math.round((category.amountPaise / topCategoryPaise) * 100))
-                      : 0
-                  const shareTotal = categoryShareOfExpenses(category.amountPaise, totalCategoryExpense)
-                  const label = categoryLabel(category.categoryId, categoryState.categories)
-                  const showIcon = hasBuiltInCategoryIcon(category.categoryId)
-                  return (
-                    <li key={category.categoryId} className="dashboard-category-item">
-                      <div className="dashboard-category-row-head">
-                        <span className="dashboard-category-name-wrap">
-                          {showIcon ? (
-                            <span className="dashboard-category-icon" aria-hidden="true">
-                              <CategoryExpenseIcon categoryId={category.categoryId} />
-                            </span>
-                          ) : null}
-                          <span className="dashboard-category-name">{label}</span>
-                          <span className="dashboard-category-share">{shareTotal}%</span>
-                        </span>
-                        <span className="dashboard-category-amount amount amount--expense">
-                          {formatInrFromPaise(category.amountPaise)}
-                        </span>
-                      </div>
+              {activeMonth !== currentMonth ? (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => setSelectedMonth(currentMonth)}
+                >
+                  Go to current month
+                </button>
+              ) : null}
+            </section>
+          ) : null}
+
+          {hasMonthActivity ? (
+          <section className="dashboard-block dashboard-overview" aria-labelledby="dashboard-overview-title">
+            <header className="dashboard-overview-head">
+              <h2 id="dashboard-overview-title" className="dashboard-overview-title">
+                Financial overview
+              </h2>
+            </header>
+            <div className="dashboard-kpi-grid">
+              <DashboardKpiCard
+                label="Income"
+                role="income"
+                tone="amount--income"
+                value={formatInrFromPaise(monthIncomePaise)}
+                icon={<DashboardMetricIcon name="trend-up" />}
+                hint={selectedMonthLabel}
+              />
+              <DashboardKpiCard
+                label="Expenses"
+                role="expense"
+                tone="amount--expense"
+                value={formatInrFromPaise(monthExpensePaise)}
+                icon={<DashboardMetricIcon name="trend-down" />}
+                hint={selectedMonthLabel}
+              />
+              <DashboardKpiCard
+                label="Net balance"
+                role="net"
+                tone={monthNetPaise < 0 ? 'amount--expense' : 'amount--balance'}
+                value={formatInrFromPaise(monthNetPaise)}
+                icon={<DashboardMetricIcon name="wallet" />}
+                hint={`Income minus expenses · ${selectedMonthLabel}`}
+              />
+              <DashboardKpiCard
+                label="Savings progress"
+                role="savings"
+                tone="amount--balance"
+                value={
+                  savingsProgressPercent === null
+                    ? '—'
+                    : `${savingsProgressPercent}%`
+                }
+                icon={<DashboardMetricIcon name="wallet" />}
+                hint={
+                  savingsSummary.ok && savingsSummary.goalCount > 0
+                    ? `${formatInrFromPaise(savingsSummary.totalSavedPaise)} of ${formatInrFromPaise(savingsSummary.totalTargetPaise)} across goals`
+                    : 'Separate from transactions'
+                }
+              />
+            </div>
+            <p className="dashboard-overview-footnote">
+              All-time net from saved transactions:{' '}
+              <span className="amount amount--balance">{formatInrFromPaise(allTimeSummary.netPaise)}</span>
+            </p>
+          </section>
+          ) : null}
+
+          {safePresentation && safeToSpend?.ok && (
+            <section
+              className={`dashboard-block dashboard-budget-compact dashboard-safe-to-spend--${safePresentation.cardTone}`}
+              aria-labelledby="dashboard-safe-to-spend-title"
+            >
+              <div className="dashboard-budget-compact-head">
+                <p id="dashboard-safe-to-spend-title" className="dashboard-budget-compact-eyebrow">
+                  {safePresentation.headlineLabel}
+                </p>
+                <span
+                  className={`dashboard-sts-status dashboard-sts-status--${safePresentation.statusTone}`}
+                  role="status"
+                >
+                  {safePresentation.statusLabel}
+                </span>
+              </div>
+              {safePresentation.value !== null && (
+                <div className="dashboard-budget-compact-hero">
+                  <p
+                    className={`dashboard-budget-compact-value amount${
+                      safePresentation.valueTone === 'expense' ? ' amount--expense' : ' amount--balance'
+                    }`}
+                  >
+                    {safePresentation.valueTone === 'expense' && safePresentation.value < 0
+                      ? `−${formatInrFromPaise(-safePresentation.value)}`
+                      : formatInrFromPaise(safePresentation.value)}
+                  </p>
+                </div>
+              )}
+              {(safePresentation.showBudgetProgress ||
+                safePresentation.showIncomeMetric ||
+                safePresentation.showExpenseMetric ||
+                safePresentation.showUnbudgetedMetric) && (
+                <div className="dashboard-budget-compact-details">
+                  {safePresentation.showBudgetProgress && safeToSpend.budgetLimitPaise > 0 && (
+                    <div className="dashboard-sts-budget">
                       <div
-                        className="dashboard-category-track"
-                        role="img"
-                        aria-label={`${label}: ${formatInrFromPaise(category.amountPaise)}, ${shareTotal} percent of expenses`}
+                        className={`dashboard-sts-progress${
+                          budgetProgressOver ? ' dashboard-sts-progress--over' : ''
+                        }`}
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={budgetProgressPercent}
+                        aria-label={`${budgetProgressPercent}% of combined category budget used`}
                       >
                         <div
-                          className="dashboard-category-fill"
-                          style={{ width: `${shareWidth}%` }}
+                          className="dashboard-sts-progress-fill"
+                          style={{ width: `${budgetProgressPercent}%` }}
                         />
+                      </div>
+                      <div className="dashboard-sts-budget-labels">
+                        <span>
+                          Spent{' '}
+                          <strong className="amount amount--expense">
+                            {formatInrFromPaise(safeToSpend.budgetSpentPaise)}
+                          </strong>{' '}
+                          of{' '}
+                          <strong>{formatInrFromPaise(safeToSpend.budgetLimitPaise)}</strong>
+                        </span>
+                        <span>{budgetProgressPercent}% used</span>
+                      </div>
+                    </div>
+                  )}
+                  {(safePresentation.showIncomeMetric ||
+                    safePresentation.showExpenseMetric ||
+                    safePresentation.showUnbudgetedMetric) && (
+                    <dl className="dashboard-sts-metrics">
+                      {safePresentation.showIncomeMetric ? (
+                        <div>
+                          <dt>Month income</dt>
+                          <dd className="amount amount--income">
+                            {formatInrFromPaise(safeToSpend.monthIncomePaise)}
+                          </dd>
+                        </div>
+                      ) : null}
+                      {safePresentation.showExpenseMetric ? (
+                        <div>
+                          <dt>Month expenses</dt>
+                          <dd className="amount amount--expense">
+                            {formatInrFromPaise(safeToSpend.monthExpensePaise)}
+                          </dd>
+                        </div>
+                      ) : null}
+                      {safePresentation.showUnbudgetedMetric ? (
+                        <div>
+                          <dt>Outside budgets</dt>
+                          <dd className="amount amount--expense">
+                            {formatInrFromPaise(safeToSpend.unbudgetedExpensePaise)}
+                          </dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  )}
+                </div>
+              )}
+              <footer className="dashboard-sts-foot dashboard-budget-compact-foot">
+                <p className="dashboard-sts-footnote">{SAFE_TO_SPEND_FOOTNOTE}</p>
+                {typeof onNavigateToBudgets === 'function' &&
+                  (safePresentation.showBudgetCta || safePresentation.showBudgetLink) && (
+                    <div className="dashboard-sts-actions">
+                      {safePresentation.showBudgetCta && (
+                        <button type="button" className="btn btn--primary" onClick={onNavigateToBudgets}>
+                          Set up budgets
+                        </button>
+                      )}
+                      {safePresentation.showBudgetLink && (
+                        <button type="button" className="btn" onClick={onNavigateToBudgets}>
+                          View budgets
+                        </button>
+                      )}
+                    </div>
+                  )}
+              </footer>
+            </section>
+          )}
+
+          <div className="dashboard-charts-grid">
+            {hasMonthActivity ? (
+              <section
+                className="dashboard-block dashboard-chart-card dashboard-chart-card--spending"
+                aria-labelledby="dashboard-spending-title"
+              >
+                <header className="section-head section-head--in-panel">
+                  <h2 id="dashboard-spending-title" className="section-head__title">
+                    Spending by category
+                  </h2>
+                  <p className="section-head__sub">{selectedMonthLabel} expenses</p>
+                </header>
+                <CategoryDonutChart
+                  segments={monthCategorySegments}
+                  totalExpensePaise={monthExpensePaise}
+                  customCategories={categoryState.categories}
+                  emptyMessage={`No expenses in ${selectedMonthLabel}. Category breakdown appears when you record spending for this month.`}
+                />
+              </section>
+            ) : null}
+
+            <section
+              className={`dashboard-block dashboard-chart-card dashboard-chart-card--cashflow${
+                hasMonthActivity ? '' : ' dashboard-chart-card--wide'
+              }`}
+              aria-labelledby="dashboard-cashflow-title"
+            >
+              <header className="section-head section-head--in-panel">
+                <h2 id="dashboard-cashflow-title" className="section-head__title">
+                  Monthly cash flow
+                </h2>
+                <p className="section-head__sub">
+                  Income vs expenses · four months ending {selectedMonthLabel}
+                </p>
+              </header>
+              {cashFlow.ok && cashFlow.rows.length > 0 ? (
+                <CashFlowBarChart rows={cashFlow.rows} maxPaise={cashFlow.maxPaise} />
+              ) : (
+                <p className="dashboard-empty-inline">Not enough data to chart cash flow yet.</p>
+              )}
+            </section>
+          </div>
+
+          <section className="dashboard-block dashboard-savings" aria-labelledby="dashboard-savings-title">
+            <header className="section-head section-head--in-panel">
+              <h2 id="dashboard-savings-title" className="section-head__title">
+                Savings goals
+              </h2>
+              <p className="section-head__sub">
+                {savingsGoals.length > 0
+                  ? `Tracked separately from transactions · ${formatInrFromPaise(savingsSummary.ok ? savingsSummary.totalSavedPaise : 0)} saved`
+                  : 'Create a goal to track deposits and progress here.'}
+              </p>
+            </header>
+            {savingsGoals.length === 0 ? (
+              <p className="dashboard-empty-inline">
+                No savings goals yet. Add one in Savings Goals to see progress on your dashboard.
+              </p>
+            ) : (
+              <ul className="dashboard-savings-list">
+                {savingsGoals.slice(0, 3).map((goal) => {
+                  const saved = goalSavedBalancePaise(goal.entries) ?? 0
+                  return (
+                    <li key={goal.id} className="dashboard-savings-item">
+                      <SavingsGoalProgressRing
+                        savedPaise={saved}
+                        targetPaise={goal.targetPaise}
+                        goalName={goal.name}
+                      />
+                      <div className="dashboard-savings-details">
+                        <p className="dashboard-savings-name">{goal.name}</p>
+                        <p className="dashboard-savings-amount">
+                          <span className="dashboard-savings-amount-saved">
+                            {formatInrFromPaise(saved)}
+                          </span>
+                          <span className="dashboard-savings-amount-sep" aria-hidden="true">
+                            {' / '}
+                          </span>
+                          <span className="dashboard-savings-amount-target">
+                            {formatInrFromPaise(goal.targetPaise)}
+                          </span>
+                        </p>
                       </div>
                     </li>
                   )
                 })}
               </ul>
             )}
+            {typeof onNavigateToSavings === 'function' && (
+              <footer className="dashboard-sts-foot">
+                <button type="button" className="btn btn--primary" onClick={onNavigateToSavings}>
+                  {savingsGoals.length > 0 ? 'View savings goals' : 'Set up savings goals'}
+                </button>
+              </footer>
+            )}
           </section>
 
-          {insight && (
-            <aside className="dashboard-insight" aria-labelledby="dashboard-insight-title">
+          {hasMonthActivity && insight ? (
+            <aside
+              className={`dashboard-insight${
+                insight.title === 'Budget watch' ? ' dashboard-insight--budget-watch' : ''
+              }`}
+              aria-labelledby="dashboard-insight-title"
+            >
               <p id="dashboard-insight-title" className="dashboard-insight-title">
                 {insight.title}
               </p>
               <p className="dashboard-insight-body">{insight.body}</p>
             </aside>
-          )}
+          ) : null}
 
+          {hasMonthActivity ? (
           <section className="dashboard-block dashboard-block--recent" aria-labelledby="dashboard-recent-expenses">
             <header className="section-head section-head--in-panel">
               <h2 id="dashboard-recent-expenses" className="section-head__title">
                 Recent activity
               </h2>
-              <p className="section-head__sub">Latest expense transactions</p>
+              <p className="section-head__sub">Latest expenses in {selectedMonthLabel}</p>
             </header>
             {recentExpenseRows.length === 0 ? (
               <p className="dashboard-empty-inline">
-                No expenses yet. Your five most recent expense entries will appear here.
+                No expenses in {selectedMonthLabel}. Up to five expense entries from this month appear here.
               </p>
             ) : (
               <ul className="dashboard-activity-list">
@@ -637,12 +789,20 @@ function DashboardSection({ onNavigateToBudgets }) {
                   const title = transaction.description?.trim() || label
                   return (
                     <li key={transaction.id} className="dashboard-activity-item">
+                      <span className="dashboard-activity-icon" aria-hidden="true">
+                        <CategoryExpenseIcon
+                          categoryId={transaction.categoryId}
+                          customCategories={categoryState.categories}
+                        />
+                      </span>
                       <div className="dashboard-activity-main">
                         <span className="dashboard-activity-title">{title}</span>
                         <span className="dashboard-activity-meta">
-                          {transaction.date}
-                          {' · '}
-                          {label}
+                          <time dateTime={transaction.date}>{transaction.date}</time>
+                          <span className="dashboard-activity-meta-sep" aria-hidden="true">
+                            ·
+                          </span>
+                          <span className="dashboard-activity-category">{label}</span>
                         </span>
                       </div>
                       <span className="dashboard-activity-amount amount amount--expense">
@@ -654,6 +814,7 @@ function DashboardSection({ onNavigateToBudgets }) {
               </ul>
             )}
           </section>
+          ) : null}
         </div>
       )}
     </section>

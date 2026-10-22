@@ -59,6 +59,7 @@
   min-height: var(--control-height);
   max-width: 100%;
   box-sizing: border-box;
+  box-shadow: var(--input-inset-shadow, none);
   transition:
     border-color var(--transition-interactive),
     background-color var(--transition-interactive),

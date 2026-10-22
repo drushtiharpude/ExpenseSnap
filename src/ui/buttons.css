@@ -9,6 +9,7 @@
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
   padding: var(--space-2) var(--space-3);
   cursor: pointer;
   transition:
@@ -20,6 +21,7 @@
   &:hover:not(:disabled) {
     border-color: var(--border);
     background: var(--surface-inset);
+    box-shadow: var(--shadow-sm);
   }
 
   &:active:not(:disabled) {
@@ -42,19 +44,21 @@
 }
 
 .btn--primary {
-  color: var(--accent);
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
+  color: var(--btn-primary-fg);
+  background: var(--accent);
+  border-color: var(--btn-primary-border);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-bg) 75%, var(--surface-elevated));
-  border-color: var(--accent);
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, var(--accent) 88%, #0c1628);
+  border-color: color-mix(in srgb, var(--accent) 82%, #0c1628);
   box-shadow: var(--shadow-xs);
 }
 
 .btn--primary:active:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-bg) 90%, var(--surface-inset));
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, var(--accent) 92%, #0c1628);
 }
 
 .btn--primary:focus-visible {
@@ -62,9 +66,10 @@
 }
 
 .btn--primary:disabled {
-  color: var(--text);
-  background: var(--surface-inset);
-  border-color: var(--border-subtle);
+  color: var(--btn-primary-fg-disabled);
+  background: var(--btn-primary-bg-disabled);
+  border-color: var(--btn-primary-border-disabled);
+  opacity: 1;
 }
 
 .btn--danger {
@@ -88,9 +93,9 @@
 }
 
 .btn.dictation-button[aria-pressed='true'] {
-  color: var(--accent);
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
+  color: var(--btn-primary-fg);
+  background: var(--accent);
+  border-color: var(--btn-primary-border);
 }
 
 .btn--icon {

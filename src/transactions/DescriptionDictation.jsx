@@ -1,6 +1,8 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
 import {
   appendDictationText,
+  combineDictationSegments,
+  dictationAppliedTranscript,
   getSpeechRecognitionConstructor,
   isSpeechRecognitionSupported,
   speechRecognitionErrorMessage,
@@ -13,6 +15,10 @@ function abortRecognition(recognitionRef) {
   recognition.onresult = null
   recognition.onerror = null
   recognition.onend = null
+  recognition.onstart = null
+  recognition.onaudiostart = null
+  recognition.onsoundstart = null
+  recognition.onspeechstart = null
   try {
     recognition.abort()
   } catch {
@@ -24,6 +30,8 @@ function abortRecognition(recognitionRef) {
   }
 }
 
+const NO_SPEECH_MESSAGE = 'No speech was detected. Try again or type the description.'
+
 const DescriptionDictation = forwardRef(function DescriptionDictation(
   { value, onChange, disabled = false, maxLength = 500 },
   ref,
@@ -33,40 +41,67 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
   const statusId = useId()
   const recognitionRef = useRef(null)
   const mountedRef = useRef(true)
+  const onChangeRef = useRef(onChange)
   const baseDescriptionRef = useRef('')
-  const finalsRef = useRef([])
+  const finalsRef = useRef({})
+  const interimRef = useRef('')
   const userEditedDuringSessionRef = useRef(false)
+  const sessionActiveRef = useRef(false)
   const [listening, setListening] = useState(false)
   const [interimText, setInterimText] = useState('')
   const [status, setStatus] = useState({ kind: 'idle', message: '' })
 
-  function stopDictation({ reason = 'idle', message = '' } = {}) {
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  function updateDescriptionFromRecognition() {
+    if (userEditedDuringSessionRef.current) return false
+    const combined = combineDictationSegments(finalsRef.current, interimRef.current)
+    if (combined === '') return false
+    const next = appendDictationText(baseDescriptionRef.current, combined)
+    const applied = dictationAppliedTranscript(baseDescriptionRef.current, next)
+    onChangeRef.current(next.slice(0, maxLength))
+    return applied
+  }
+
+  function finishDictationSession({
+    message = '',
+    messageKind = 'error',
+    flushRecognition = false,
+    appliedTranscript = false,
+  } = {}) {
+    let hadText = appliedTranscript
+    if (flushRecognition) {
+      hadText = updateDescriptionFromRecognition()
+    }
     abortRecognition(recognitionRef)
     if (!mountedRef.current) return
+    const hadSession = sessionActiveRef.current
+    sessionActiveRef.current = false
     setListening(false)
     setInterimText('')
-    finalsRef.current = []
+    interimRef.current = ''
+    finalsRef.current = {}
     userEditedDuringSessionRef.current = false
-    if (message) setStatus({ kind: reason, message })
-    else if (reason === 'success') {
+
+    if (message) {
+      setStatus({ kind: messageKind, message })
+    } else if (hadText) {
       setStatus({
         kind: 'success',
         message: 'Dictation added. Review the description before saving.',
       })
-    } else setStatus({ kind: 'idle', message: '' })
+    } else if (hadSession) {
+      setStatus({ kind: 'idle', message: NO_SPEECH_MESSAGE })
+    } else {
+      setStatus({ kind: 'idle', message: '' })
+    }
   }
 
   useImperativeHandle(ref, () => ({
-    stopDictation: () => stopDictation({ reason: 'idle' }),
+    stopDictation: () => finishDictationSession({ flushRecognition: true }),
   }))
-
-  function applyRecognizedText() {
-    if (userEditedDuringSessionRef.current) return
-    const combined = finalsRef.current.join(' ').trim()
-    if (combined === '') return
-    const next = appendDictationText(baseDescriptionRef.current, combined)
-    onChange(next.slice(0, maxLength))
-  }
 
   function startDictation() {
     if (disabled || listening || !supported) return
@@ -79,9 +114,11 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
       return
     }
 
-    baseDescriptionRef.current = value
-    finalsRef.current = []
+    baseDescriptionRef.current = typeof value === 'string' ? value : ''
+    finalsRef.current = {}
+    interimRef.current = ''
     userEditedDuringSessionRef.current = false
+    sessionActiveRef.current = true
     setInterimText('')
     setStatus({
       kind: 'listening',
@@ -95,6 +132,11 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
     recognition.lang = navigator.language || 'en-IN'
     recognitionRef.current = recognition
 
+    recognition.onstart = () => {
+      if (!mountedRef.current || recognitionRef.current !== recognition) return
+      setListening(true)
+    }
+
     recognition.onresult = (event) => {
       if (!mountedRef.current || userEditedDuringSessionRef.current) return
       let interim = ''
@@ -102,35 +144,49 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
         const result = event.results[index]
         const transcript = result[0]?.transcript ?? ''
         if (result.isFinal) {
-          if (transcript.trim() !== '') finalsRef.current.push(transcript.trim())
+          const trimmed = transcript.trim()
+          if (trimmed !== '') finalsRef.current[index] = trimmed
+          else delete finalsRef.current[index]
         } else {
           interim += transcript
         }
       }
-      setInterimText(interim.trim())
-      applyRecognizedText()
+      const trimmedInterim = interim.trim()
+      interimRef.current = trimmedInterim
+      setInterimText(trimmedInterim)
+      updateDescriptionFromRecognition()
     }
 
     recognition.onerror = (event) => {
+      const errorCode = event?.error ?? 'unknown'
       if (!mountedRef.current) return
-      const message = speechRecognitionErrorMessage(event)
-      stopDictation(message ? { reason: 'error', message } : { reason: 'idle' })
+      if (recognitionRef.current !== recognition) return
+      const hadText = updateDescriptionFromRecognition()
+      const isAborted = errorCode === 'aborted'
+      const message = isAborted ? '' : speechRecognitionErrorMessage(event)
+      finishDictationSession({
+        message,
+        messageKind: message ? 'error' : 'idle',
+        flushRecognition: false,
+        appliedTranscript: isAborted ? false : hadText,
+      })
     }
 
     recognition.onend = () => {
       if (!mountedRef.current) return
       if (recognitionRef.current !== recognition) return
-      applyRecognizedText()
-      stopDictation({ reason: 'success' })
+      const hadText = updateDescriptionFromRecognition()
+      finishDictationSession({ flushRecognition: false, appliedTranscript: hadText })
     }
 
     try {
       recognition.start()
-      setListening(true)
-    } catch {
-      stopDictation({
-        reason: 'error',
+    } catch (error) {
+      sessionActiveRef.current = false
+      finishDictationSession({
         message: 'Speech recognition could not start. You can still type the description.',
+        messageKind: 'error',
+        flushRecognition: false,
       })
     }
   }
@@ -139,6 +195,7 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+      sessionActiveRef.current = false
       abortRecognition(recognitionRef)
     }
   }, [])
@@ -146,9 +203,10 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
   function handleDescriptionChange(event) {
     if (listening) {
       userEditedDuringSessionRef.current = true
-      stopDictation({
-        reason: 'idle',
+      finishDictationSession({
         message: 'Dictation stopped so your typed changes are kept.',
+        messageKind: 'idle',
+        flushRecognition: false,
       })
     }
     onChange(event.target.value)
@@ -158,6 +216,9 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
     status.kind === 'listening' && interimText !== ''
       ? `${status.message} Heard: “${interimText}”`
       : status.message
+
+  const secureContext =
+    typeof globalThis.window !== 'undefined' && globalThis.window.isSecureContext
 
   return (
     <div className="description-field">
@@ -182,7 +243,11 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
               disabled={disabled}
               aria-pressed={listening}
               aria-describedby={`${noteId}-dictation-note`}
-              onClick={() => (listening ? stopDictation({ reason: 'idle' }) : startDictation())}
+              onClick={() =>
+                listening
+                  ? finishDictationSession({ flushRecognition: true })
+                  : startDictation()
+              }
             >
               {listening ? 'Stop dictation' : 'Dictate description'}
             </button>
@@ -194,8 +259,9 @@ const DescriptionDictation = forwardRef(function DescriptionDictation(
           </>
         ) : (
           <p id={`${noteId}-dictation-note`} className="dictation-note">
-            Voice dictation is not available in this browser. Type your description instead. Speech
-            features depend on browser support and may send audio to an external speech service.
+            {!secureContext
+              ? 'Voice dictation requires a secure connection (HTTPS or localhost). Type your description instead.'
+              : 'Voice dictation is not available in this browser. Type your description instead. Speech features depend on browser support and may send audio to an external speech service.'}
           </p>
         )}
 

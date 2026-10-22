@@ -10,6 +10,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-inset);
+  box-shadow: var(--shadow-xs);
 }
 
 [data-theme='dark'] .transaction-table-wrap,

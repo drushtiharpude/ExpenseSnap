@@ -1,12 +1,17 @@
 import { createTransactionId } from './transaction.js'
 import { PREDEFINED_CATEGORIES } from '../transactions/categories.js'
+import {
+  defaultCategoryIconId,
+  isValidCategoryIconId,
+} from '../transactions/categoryIcons.js'
 
 const TYPES = new Set(['income', 'expense'])
 const ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const TIMESTAMP_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/
-const FIELDS = ['id', 'type', 'name', 'createdAt', 'updatedAt']
+const FIELDS = ['id', 'type', 'name', 'iconId', 'createdAt', 'updatedAt']
+const LEGACY_FIELDS = ['id', 'type', 'name', 'createdAt', 'updatedAt']
 const MAX_NAME_LENGTH = 40
 const PREDEFINED_IDS = new Set(PREDEFINED_CATEGORIES.map((category) => category.id))
 const PREDEFINED_NAMES = new Set(
@@ -54,37 +59,28 @@ export function categoryNameError(name, type, categories, ignoreId) {
   return ''
 }
 
-export function validateCategory(value) {
-  if (!isRecord(value)) return { ok: false, errors: ['Category must be an object.'] }
-
-  const errors = []
+function normalizeCategoryFields(value) {
   const keys = Object.keys(value)
-  if (keys.length !== FIELDS.length || FIELDS.some((field) => !Object.hasOwn(value, field))) {
-    errors.push('Category must contain only the expected fields.')
+  const allowed = new Set(FIELDS)
+  if (keys.some((key) => !allowed.has(key))) {
+    return { ok: false, errors: ['Category must contain only the expected fields.'] }
   }
-  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id) || PREDEFINED_IDS.has(value.id)) {
-    errors.push('Category id must be a UUID that is separate from its name.')
+  if (!LEGACY_FIELDS.every((field) => Object.hasOwn(value, field))) {
+    return { ok: false, errors: ['Category must contain only the expected fields.'] }
   }
-  if (!TYPES.has(value.type)) errors.push('Category type must be income or expense.')
-  if (
-    typeof value.name !== 'string' ||
-    value.name.trim() !== value.name ||
-    value.name.length < 1 ||
-    value.name.length > MAX_NAME_LENGTH ||
-    hasControlChar(value.name)
-  ) {
-    errors.push('Category name must be text up to 40 characters.')
+  const hasIconId = Object.hasOwn(value, 'iconId')
+  const expectedKeyCount = hasIconId ? FIELDS.length : LEGACY_FIELDS.length
+  if (keys.length !== expectedKeyCount) {
+    return { ok: false, errors: ['Category must contain only the expected fields.'] }
   }
-  if (!isTimestamp(value.createdAt)) errors.push('createdAt must be a UTC timestamp.')
-  if (!isTimestamp(value.updatedAt)) errors.push('updatedAt must be a UTC timestamp.')
-  if (
-    isTimestamp(value.createdAt) &&
-    isTimestamp(value.updatedAt) &&
-    value.updatedAt < value.createdAt
-  ) {
-    errors.push('updatedAt must not be earlier than createdAt.')
+
+  let iconId = defaultCategoryIconId(value.type)
+  if (hasIconId) {
+    if (!isValidCategoryIconId(value.iconId)) {
+      return { ok: false, errors: ['Category iconId must be a supported icon.'] }
+    }
+    iconId = value.iconId
   }
-  if (errors.length > 0) return { ok: false, errors }
 
   return {
     ok: true,
@@ -92,10 +88,46 @@ export function validateCategory(value) {
       id: value.id,
       type: value.type,
       name: value.name,
+      iconId,
       createdAt: value.createdAt,
       updatedAt: value.updatedAt,
     },
   }
+}
+
+export function validateCategory(value) {
+  if (!isRecord(value)) return { ok: false, errors: ['Category must be an object.'] }
+
+  const errors = []
+  const normalized = normalizeCategoryFields(value)
+  if (!normalized.ok) return normalized
+
+  const category = normalized.category
+  if (typeof category.id !== 'string' || !ID_PATTERN.test(category.id) || PREDEFINED_IDS.has(category.id)) {
+    errors.push('Category id must be a UUID that is separate from its name.')
+  }
+  if (!TYPES.has(category.type)) errors.push('Category type must be income or expense.')
+  if (
+    typeof category.name !== 'string' ||
+    category.name.trim() !== category.name ||
+    category.name.length < 1 ||
+    category.name.length > MAX_NAME_LENGTH ||
+    hasControlChar(category.name)
+  ) {
+    errors.push('Category name must be text up to 40 characters.')
+  }
+  if (!isTimestamp(category.createdAt)) errors.push('createdAt must be a UTC timestamp.')
+  if (!isTimestamp(category.updatedAt)) errors.push('updatedAt must be a UTC timestamp.')
+  if (
+    isTimestamp(category.createdAt) &&
+    isTimestamp(category.updatedAt) &&
+    category.updatedAt < category.createdAt
+  ) {
+    errors.push('updatedAt must not be earlier than createdAt.')
+  }
+  if (errors.length > 0) return { ok: false, errors }
+
+  return { ok: true, category }
 }
 
 export function validateCategories(value) {
@@ -134,23 +166,47 @@ export function createCategory(input, categories, now = new Date()) {
   if (!isRecord(input)) return { ok: false, errors: ['Category input must be an object.'] }
   const nameError = categoryNameError(input.name, input.type, categories)
   if (nameError) return { ok: false, errors: [nameError] }
+  const iconId =
+    typeof input.iconId === 'string' && isValidCategoryIconId(input.iconId)
+      ? input.iconId
+      : defaultCategoryIconId(input.type)
   return validateCategory({
     id: createTransactionId(),
     type: input.type,
     name: input.name.trim(),
+    iconId,
     createdAt: timestampFrom(now),
     updatedAt: timestampFrom(now),
   })
 }
 
 export function renameCategory(existing, name, categories, now = new Date()) {
+  return updateCustomCategory(existing, { name }, categories, now)
+}
+
+export function updateCustomCategory(existing, updates, categories, now = new Date()) {
   const current = validateCategory(existing)
   if (!current.ok) return current
-  const nameError = categoryNameError(name, current.category.type, categories, current.category.id)
-  if (nameError) return { ok: false, errors: [nameError] }
+
+  let name = current.category.name
+  if (updates?.name !== undefined) {
+    const nameError = categoryNameError(updates.name, current.category.type, categories, current.category.id)
+    if (nameError) return { ok: false, errors: [nameError] }
+    name = updates.name.trim()
+  }
+
+  let iconId = current.category.iconId
+  if (updates?.iconId !== undefined) {
+    if (!isValidCategoryIconId(updates.iconId)) {
+      return { ok: false, errors: ['Choose a supported icon.'] }
+    }
+    iconId = updates.iconId
+  }
+
   return validateCategory({
     ...current.category,
-    name: name.trim(),
+    name,
+    iconId,
     updatedAt: timestampFrom(now),
   })
 }

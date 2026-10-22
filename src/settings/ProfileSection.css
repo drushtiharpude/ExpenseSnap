@@ -1,0 +1,252 @@
+.profile-settings.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profile-settings--page {
+  gap: var(--space-4);
+}
+
+.profile-settings--page .profile-settings-preview {
+  max-width: none;
+}
+
+.profile-settings--page .profile-settings-field input,
+.profile-settings--page .profile-settings-field textarea {
+  max-width: none;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-elevated);
+  color: var(--text-h);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-settings--page .profile-settings-field textarea {
+  min-height: 4.75rem;
+  padding-top: 0.625rem;
+}
+
+.profile-settings--page .profile-settings-field input:hover,
+.profile-settings--page .profile-settings-field textarea:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-subtle));
+}
+
+.profile-settings--page .profile-settings-field input:focus-visible,
+.profile-settings--page .profile-settings-field textarea:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--border-subtle));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-settings--page .profile-settings-field input,
+  .profile-settings--page .profile-settings-field textarea {
+    transition: none;
+  }
+}
+
+.profile-settings--page .profile-settings-preview {
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-subtle));
+  border-left-width: 3px;
+  border-left-color: var(--accent);
+  background: var(--surface-inset);
+}
+
+[data-theme='dark'] .profile-settings--page .profile-settings-preview {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    var(--surface-muted);
+}
+
+.profile-settings--page .profile-settings-preview-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.profile-settings--page .profile-settings-preview-line {
+  margin-top: var(--space-2);
+  font-size: 1.125rem;
+}
+
+.profile-settings--page .profile-settings-actions {
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+}
+
+.profile-settings--page .profile-settings-actions .btn--primary {
+  min-width: 6.5rem;
+}
+
+.profile-settings--page .profile-settings-form--motto {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.profile-settings-meta {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.profile-settings-meta__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 1fr;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.profile-settings-meta dt {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text);
+}
+
+.profile-settings-meta dd {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  color: var(--text-h);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.profile-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.profile-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-h);
+}
+
+.profile-settings-field input,
+.profile-settings-field textarea {
+  width: 100%;
+  max-width: 24rem;
+  font: inherit;
+  font-weight: var(--font-weight-normal);
+  box-sizing: border-box;
+}
+
+.profile-settings-field textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: var(--line-height-body);
+}
+
+.profile-settings--page .profile-settings-field textarea {
+  max-width: none;
+}
+
+.profile-settings-form--motto {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.profile-settings-hint {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--text);
+  max-width: 36rem;
+}
+
+.profile-settings-preview {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+  max-width: 36rem;
+  min-width: 0;
+}
+
+.profile-settings-preview-label {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--text);
+}
+
+.profile-settings-preview-line {
+  margin: 0;
+  font-family: var(--heading);
+  font-size: 1.0625rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--text-h);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.profile-settings-alert {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-ui);
+  color: var(--alert-error-text);
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+}
+
+.profile-settings-alert p {
+  margin: 0;
+}
+
+.profile-settings-notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-ui);
+  color: var(--alert-success-text);
+  background: var(--alert-success-bg);
+  border: 1px solid var(--alert-success-border);
+}
+
+.profile-settings-notice p {
+  margin: 0;
+}
+
+.profile-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.profile-settings-footnote {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--text);
+  max-width: 40rem;
+}
+
+@media (max-width: 480px) {
+  .profile-settings-meta__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .profile-settings-field input {
+    max-width: 100%;
+  }
+}

@@ -1,4 +1,7 @@
-/* In-page section header (title + optional subtext); adopt on pages over time */
+/**
+ * Shared elevated surfaces. `.app-card` mirrors `.dashboard-block` styling for non-Dashboard routes
+ * without adding the emerald top hairline (see ::before rules on finance/settings/transaction panels).
+ */
 .section-head {
   display: flex;
   flex-direction: column;
@@ -29,29 +32,57 @@
 }
 
 .dashboard-block,
+.app-card,
 .finance-panel,
 .settings-panel,
 .transaction-panel {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   margin: 0;
   padding: var(--space-4) var(--space-5);
-  background: var(--surface-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  background: var(--app-card-surface);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-card-shadow), var(--app-card-edge-highlight);
+}
+
+.finance-panel:not(.dashboard-block):not(.app-card)::before,
+.settings-panel:not(.app-card)::before,
+.transaction-panel:not(.dashboard-block):not(.app-card)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--space-4);
+  right: var(--space-4);
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+[data-theme='dark'] .finance-panel:not(.dashboard-block):not(.app-card)::before,
+[data-theme='dark'] .settings-panel:not(.app-card)::before,
+[data-theme='dark'] .transaction-panel:not(.dashboard-block):not(.app-card)::before {
+  opacity: 0.5;
 }
 
 [data-theme='dark'] .dashboard-block,
+[data-theme='dark'] .app-card,
 [data-theme='dark'] .finance-panel,
 [data-theme='dark'] .settings-panel,
 [data-theme='dark'] .transaction-panel {
-  background: var(--surface-elevated);
+  background: var(--app-card-surface);
+  box-shadow: var(--app-card-shadow), var(--app-card-edge-highlight);
 }
 
 .dashboard-block h2,
 .dashboard-block h3,
+.app-card h2,
+.app-card h3,
 .finance-panel h2,
 .finance-panel h3,
 .settings-panel h2,
@@ -62,6 +93,7 @@
 }
 
 .dashboard-block > h2,
+.app-card > h2,
 .finance-panel > h2,
 .settings-panel > h2,
 .transaction-panel > h2 {
@@ -71,10 +103,11 @@
   letter-spacing: var(--letter-spacing-section);
   color: var(--text-h);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 .dashboard-block > h3,
+.app-card > h3,
 .finance-panel > h3,
 .settings-panel > h3,
 .transaction-panel > h3 {
@@ -90,7 +123,7 @@
   color: var(--text);
   font-size: var(--font-size-ui);
   line-height: var(--line-height-body);
-  background: var(--surface-inset);
+  background: color-mix(in srgb, var(--surface-inset) 88%, var(--surface-elevated));
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
 }

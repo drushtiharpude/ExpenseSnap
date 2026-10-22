@@ -1,7 +1,25 @@
+import { categoryLabel } from '../transactions/categories.js'
+import { formatInrFromPaise } from '../transactions/money.js'
 import { addPaise, calendarMonthKey } from './summarize.js'
 
 /** Minimum expense delta (paise) for Money Coach period trend messages. */
 export const COACH_MIN_TREND_DIFF_PAISE = 5000
+
+/** Minimum share of month expenses before surfacing a top-category insight. */
+export const INSIGHT_MIN_TOP_CATEGORY_SHARE_PERCENT = 20
+
+/** Minimum month-over-month category increase (paise) for category trend insights. */
+export const INSIGHT_MIN_CATEGORY_MOM_DELTA_PAISE = 3000
+
+/** Maximum insight lines shown on Analytics (factual notes prioritized over suggestions). */
+export const MAX_ANALYTICS_INSIGHT_LINES = 8
+
+function formatMonthLabel(monthKey) {
+  const [year, monthNumber] = monthKey.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(
+    new Date(year, monthNumber - 1, 1),
+  )
+}
 
 function monthKeyFromDate(date) {
   if (typeof date !== 'string' || date.length < 7) return null
@@ -107,17 +125,29 @@ export function monthlyExpenseSeries(transactions) {
   for (const transaction of transactions) {
     const amount = transaction?.amountPaise
     if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, error: 'invalid' }
-    if (transaction.type !== 'expense') continue
+    if (transaction.type !== 'expense' && transaction.type !== 'income') {
+      return { ok: false, error: 'invalid' }
+    }
     const month = monthKeyFromDate(transaction.date)
     if (!month) return { ok: false, error: 'invalid' }
-    const next = addPaise(byMonth.get(month) ?? 0, amount)
-    if (next === null) return { ok: false, error: 'overflow' }
-    byMonth.set(month, next)
+
+    let entry = byMonth.get(month)
+    if (!entry) {
+      entry = { month, incomePaise: 0, expensePaise: 0 }
+      byMonth.set(month, entry)
+    }
+
+    if (transaction.type === 'income') {
+      entry.incomePaise = addPaise(entry.incomePaise, amount)
+    } else {
+      entry.expensePaise = addPaise(entry.expensePaise, amount)
+    }
+    if (entry.incomePaise === null || entry.expensePaise === null) {
+      return { ok: false, error: 'overflow' }
+    }
   }
 
-  const months = [...byMonth.entries()]
-    .map(([month, expensePaise]) => ({ month, expensePaise }))
-    .sort((left, right) => left.month.localeCompare(right.month))
+  const months = [...byMonth.values()].sort((left, right) => left.month.localeCompare(right.month))
 
   return { ok: true, months }
 }
@@ -266,39 +296,105 @@ function percentChangeFromDiff(diffPaise, previousPaise) {
   return diffPaise < 0 ? -magnitude : magnitude
 }
 
+/**
+ * Full-month expense comparison for monthKey vs the prior calendar month.
+ * Percent change is omitted when the previous month had zero expenses (no division).
+ */
+export function buildExpenseMonthComparison(transactions, monthKey) {
+  if (!Array.isArray(transactions)) return { ok: false, error: 'invalid' }
+
+  const current = summarizeForMonth(transactions, monthKey)
+  if (!current.ok) return { ok: false, error: 'invalid' }
+
+  const previousKey = previousMonthKey(monthKey)
+  if (!previousKey) {
+    return {
+      ok: true,
+      comparable: false,
+      reason: 'no_previous_month',
+      currentMonth: monthKey,
+      currentExpensePaise: current.expensePaise,
+    }
+  }
+
+  const previous = summarizeForMonth(transactions, previousKey)
+  if (!previous.ok) return { ok: false, error: 'invalid' }
+
+  const currentExpensePaise = current.expensePaise
+  const previousExpensePaise = previous.expensePaise
+
+  if (currentExpensePaise === 0 && previousExpensePaise === 0) {
+    return {
+      ok: true,
+      comparable: false,
+      reason: 'both_zero',
+      currentMonth: monthKey,
+      previousMonth: previousKey,
+      currentExpensePaise: 0,
+      previousExpensePaise: 0,
+    }
+  }
+
+  const diffPaise = currentExpensePaise - previousExpensePaise
+  const percentChange = percentChangeFromDiff(diffPaise, previousExpensePaise)
+  let direction = 'unchanged'
+  if (diffPaise > 0) direction = 'increase'
+  else if (diffPaise < 0) direction = 'decrease'
+
+  return {
+    ok: true,
+    comparable: true,
+    currentMonth: monthKey,
+    previousMonth: previousKey,
+    currentExpensePaise,
+    previousExpensePaise,
+    diffPaise,
+    percentChange,
+    direction,
+  }
+}
+
 export function buildAnalyticsInsights(transactions, monthKey) {
   const insights = []
   const current = summarizeForMonth(transactions, monthKey)
   if (!current.ok) return insights
 
-  if (current.categories.length > 0) {
-    insights.push({
-      id: 'top-category',
-      categoryId: current.categories[0].categoryId,
-      amountPaise: current.categories[0].amountPaise,
-    })
+  if (current.expensePaise > 0 && current.categories.length > 0) {
+    const top = current.categories[0]
+    const sharePercent = Math.floor((top.amountPaise * 100) / current.expensePaise)
+    if (sharePercent >= INSIGHT_MIN_TOP_CATEGORY_SHARE_PERCENT) {
+      insights.push({
+        id: 'top-category',
+        categoryId: top.categoryId,
+        amountPaise: top.amountPaise,
+        sharePercent,
+      })
+    }
   }
 
-  const previousKey = previousMonthKey(monthKey)
+  const expenseComparison = buildExpenseMonthComparison(transactions, monthKey)
+  const previousKey =
+    expenseComparison.ok && expenseComparison.previousMonth
+      ? expenseComparison.previousMonth
+      : previousMonthKey(monthKey)
+
   if (previousKey) {
     const previous = summarizeForMonth(transactions, previousKey)
     if (previous.ok) {
-      const currentExpense = current.expensePaise
-      const previousExpense = previous.expensePaise
-      if (!(currentExpense === 0 && previousExpense === 0)) {
-        const diffPaise = currentExpense - previousExpense
-        if (diffPaise !== 0) {
-          const expenseInsight = {
-            id: 'expense-vs-previous',
-            previousMonth: previousKey,
-            diffPaise,
-          }
-          const percentChange = percentChangeFromDiff(diffPaise, previousExpense)
-          if (percentChange !== null) {
-            expenseInsight.percentChange = percentChange
-          }
-          insights.push(expenseInsight)
+      if (
+        expenseComparison.ok &&
+        expenseComparison.comparable &&
+        expenseComparison.diffPaise !== 0
+      ) {
+        const expenseInsight = {
+          id: 'expense-vs-previous',
+          previousMonth: expenseComparison.previousMonth,
+          diffPaise: expenseComparison.diffPaise,
         }
+        if (typeof expenseComparison.percentChange === 'number') {
+          expenseInsight.percentChange = expenseComparison.percentChange
+        }
+        insights.push(expenseInsight)
       }
 
       const previousByCategory = new Map(
@@ -308,7 +404,7 @@ export function buildAnalyticsInsights(transactions, monthKey) {
       for (const row of current.categories) {
         const previousAmount = previousByCategory.get(row.categoryId) ?? 0
         const deltaPaise = row.amountPaise - previousAmount
-        if (deltaPaise > 0) {
+        if (deltaPaise >= INSIGHT_MIN_CATEGORY_MOM_DELTA_PAISE) {
           categoryIncreases.push({
             categoryId: row.categoryId,
             deltaPaise,
@@ -342,6 +438,141 @@ export function buildAnalyticsInsights(transactions, monthKey) {
   }
 
   return insights
+}
+
+function insightDisplayPriority(insight) {
+  if (typeof insight?.id !== 'string') return 100
+  if (insight.id.startsWith('budget-exceeded:')) return 10
+  if (insight.id === 'expense-vs-previous') return 20
+  if (insight.id.startsWith('budget-approaching:')) return 30
+  if (insight.id.startsWith('category-mom-up:')) return 40
+  if (insight.id === 'top-category') return 50
+  if (insight.id === 'month-net') return 60
+  if (insight.id.startsWith('suggestion-budget-exceeded:')) return 70
+  if (insight.id.startsWith('suggestion-budget-approaching:')) return 75
+  if (insight.id.startsWith('suggestion-mom-up:')) return 80
+  return 90
+}
+
+/**
+ * Orders and de-duplicates insights for the Analytics panel.
+ * Factual budget and trend notes come first; suggestions are omitted when an equivalent fact exists.
+ */
+export function assembleAnalyticsInsightList(
+  transactionInsights,
+  budgetInsights = [],
+  savingSuggestions = [],
+) {
+  const tx = Array.isArray(transactionInsights) ? transactionInsights : []
+  const budgets = Array.isArray(budgetInsights) ? budgetInsights : []
+  const suggestions = Array.isArray(savingSuggestions) ? savingSuggestions : []
+
+  const budgetCategories = new Set(
+    budgets.map((entry) => entry.categoryId).filter((id) => typeof id === 'string'),
+  )
+  const momCategories = new Set(
+    tx
+      .filter((entry) => entry.id?.startsWith('category-mom-up:'))
+      .map((entry) => entry.categoryId)
+      .filter((id) => typeof id === 'string'),
+  )
+
+  const filteredSuggestions = suggestions.filter((entry) => {
+    if (typeof entry?.id !== 'string') return false
+    if (entry.id.startsWith('suggestion-budget-')) {
+      return !budgetCategories.has(entry.categoryId)
+    }
+    if (entry.id.startsWith('suggestion-mom-up:')) {
+      return !momCategories.has(entry.categoryId)
+    }
+    return true
+  })
+
+  const combined = [...budgets, ...tx, ...filteredSuggestions]
+  combined.sort(
+    (left, right) =>
+      insightDisplayPriority(left) - insightDisplayPriority(right) ||
+      String(left.id).localeCompare(String(right.id)),
+  )
+
+  const seen = new Set()
+  const unique = []
+  for (const entry of combined) {
+    if (!entry?.id || seen.has(entry.id)) continue
+    seen.add(entry.id)
+    unique.push(entry)
+    if (unique.length >= MAX_ANALYTICS_INSIGHT_LINES) break
+  }
+  return unique
+}
+
+/**
+ * Single dashboard highlight: budget overruns first, then this-month cash flow, then significant category share.
+ */
+export function selectPrimaryDashboardInsight({ summary, monthSummary, budgetStatus, customCategories = [] }) {
+  if (!summary?.ok) return null
+
+  const month = summary.month
+  const monthTitle = formatMonthLabel(month)
+
+  if (budgetStatus?.ok) {
+    const exceeded = budgetStatus.items
+      .filter((item) => item.status === 'exceeded')
+      .sort((left, right) => left.remainingPaise - right.remainingPaise)
+    if (exceeded.length > 0) {
+      const item = exceeded[0]
+      const label = item.categoryLabel || categoryLabel(item.categoryId, customCategories)
+      const overPaise = -item.remainingPaise
+      return {
+        title: 'Budget watch',
+        body: `${label} is ${formatInrFromPaise(overPaise)} over your ${monthTitle} budget. Ease optional ${label.toLowerCase()} spending until you're back under the limit.`,
+      }
+    }
+  }
+
+  const { monthExpensePaise, monthIncomePaise } = summary
+  const monthNet = monthIncomePaise - monthExpensePaise
+
+  if (monthExpensePaise > 0 || monthIncomePaise > 0) {
+    if (monthExpensePaise > 0 && monthIncomePaise === 0) {
+      return {
+        title: 'This month so far',
+        body: `You have ${formatInrFromPaise(monthExpensePaise)} in expenses in ${monthTitle} and no income recorded for this month yet. Add income when you receive it to see how spending compares.`,
+      }
+    }
+    if (monthNet < 0) {
+      return {
+        title: 'This month so far',
+        body: `In ${monthTitle}, spending is ahead of income by ${formatInrFromPaise(-monthNet)} based on saved transactions. Review recent expenses or record income you may have missed.`,
+      }
+    }
+    if (monthExpensePaise > 0 && monthNet >= 0) {
+      return {
+        title: 'This month so far',
+        body: `In ${monthTitle}, income covers expenses with ${formatInrFromPaise(monthNet)} left after spending.`,
+      }
+    }
+    if (monthIncomePaise > 0 && monthExpensePaise === 0) {
+      return {
+        title: 'This month so far',
+        body: `You have ${formatInrFromPaise(monthIncomePaise)} in income in ${monthTitle} and no expenses recorded this month yet.`,
+      }
+    }
+  }
+
+  if (monthSummary?.ok && monthSummary.expensePaise > 0 && monthSummary.categories.length > 0) {
+    const top = monthSummary.categories[0]
+    const sharePercent = Math.floor((top.amountPaise * 100) / monthSummary.expensePaise)
+    if (sharePercent >= INSIGHT_MIN_TOP_CATEGORY_SHARE_PERCENT) {
+      const label = categoryLabel(top.categoryId, customCategories)
+      return {
+        title: 'Where spending adds up',
+        body: `${label} accounts for ${sharePercent}% of this month's expenses (${formatInrFromPaise(top.amountPaise)}). Skim recent ${label.toLowerCase()} entries if you want to adjust.`,
+      }
+    }
+  }
+
+  return null
 }
 
 export function buildSavingSuggestions(budgetStatus, insights) {

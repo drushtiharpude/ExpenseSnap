@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react'
-import { createCategory, renameCategory } from '../data/category.js'
+import { createCategory, updateCustomCategory } from '../data/category.js'
 import { readBudgets } from '../data/budgetStore.js'
 import { readRecurringBills } from '../data/recurringBillStore.js'
 import { readCategories, saveCategories } from '../data/categoryStore.js'
 import { readTransactions } from '../data/transactionStore.js'
 import { PREDEFINED_CATEGORIES } from '../transactions/categories.js'
+import { CATEGORY_ICON_OPTIONS, defaultCategoryIconId } from '../transactions/categoryIcons.js'
 import PageHeader from '../ui/PageHeader.jsx'
+import { CategoryExpenseIcon } from '../ui/shellIcons.jsx'
 import { PAGE_TAGLINES } from '../ui/pageHeaderCopy.js'
-import BackupRestoreSection from './BackupRestoreSection.jsx'
+import TransactionExportSection from './TransactionExportSection.jsx'
 import ThemeSection from './ThemeSection.jsx'
 import './CategoriesSection.css'
 
@@ -48,6 +50,36 @@ function recurringBillDeleteBlock(categoryId, customCategories) {
   return { blocked: false, message: null }
 }
 
+function CategoryIconPicker({ groupName, value, onChange, legend }) {
+  return (
+    <fieldset className="category-icon-picker">
+      <legend>{legend}</legend>
+      <div className="category-icon-picker__grid" role="radiogroup" aria-label={legend}>
+        {CATEGORY_ICON_OPTIONS.map((option) => (
+          <label
+            key={option.id}
+            className={`category-icon-picker__option${
+              value === option.id ? ' category-icon-picker__option--selected' : ''
+            }`}
+          >
+            <input
+              type="radio"
+              name={groupName}
+              value={option.id}
+              checked={value === option.id}
+              onChange={() => onChange(option.id)}
+            />
+            <span className="category-icon-picker__icon" aria-hidden="true">
+              <CategoryExpenseIcon iconId={option.id} />
+            </span>
+            <span className="category-icon-picker__label">{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 function budgetDeleteBlock(categoryId, customCategories) {
   const budgets = readBudgets(undefined, { customCategories })
   if (!budgets.ok) {
@@ -66,13 +98,14 @@ function budgetDeleteBlock(categoryId, customCategories) {
   return { blocked: false, message: null }
 }
 
-function CategoriesSection({ onStorageRestored }) {
+function CategoriesSection({ onStorageRestored: _onStorageRestored }) {
   const [storageState, setStorageState] = useState(readCategoryState)
-  const [draft, setDraft] = useState({ name: '', type: 'expense' })
+  const [draft, setDraft] = useState({ name: '', type: 'expense', iconId: 'other' })
   const [formErrors, setFormErrors] = useState([])
   const [actionError, setActionError] = useState(null)
   const [renameId, setRenameId] = useState(null)
   const [renameName, setRenameName] = useState('')
+  const [renameIconId, setRenameIconId] = useState('other')
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
@@ -105,7 +138,10 @@ function CategoriesSection({ onStorageRestored }) {
       finish()
       return
     }
-    const created = createCategory({ name: draft.name, type: draft.type }, current.categories)
+    const created = createCategory(
+      { name: draft.name, type: draft.type, iconId: draft.iconId },
+      current.categories,
+    )
     if (!created.ok) {
       setFormErrors(created.errors)
       finish()
@@ -118,7 +154,7 @@ function CategoriesSection({ onStorageRestored }) {
       return
     }
     setStorageState({ categories: saved.categories, error: null })
-    setDraft({ name: '', type: draft.type })
+    setDraft({ name: '', type: draft.type, iconId: defaultCategoryIconId(draft.type) })
     setFormErrors([])
     finish()
   }
@@ -141,7 +177,11 @@ function CategoriesSection({ onStorageRestored }) {
       finish()
       return
     }
-    const renamed = renameCategory(existing, renameName, current.categories)
+    const renamed = updateCustomCategory(
+      existing,
+      { name: renameName, iconId: renameIconId },
+      current.categories,
+    )
     if (!renamed.ok) {
       setActionError(renamed.errors.join(' '))
       finish()
@@ -263,7 +303,12 @@ function CategoriesSection({ onStorageRestored }) {
         <ul className="category-list">
           {predefined.map((category) => (
             <li key={category.id} className="category-row category-row--builtin">
-              <span className="category-row-name">{category.label}</span>
+              <span className="category-row-leading">
+                <span className="category-row-icon" aria-hidden="true">
+                  <CategoryExpenseIcon categoryId={category.id} />
+                </span>
+                <span className="category-row-name">{category.label}</span>
+              </span>
               <span className="category-badge category-badge--builtin">Built-in</span>
             </li>
           ))}
@@ -279,9 +324,15 @@ function CategoriesSection({ onStorageRestored }) {
                       onChange={(event) => setRenameName(event.target.value)}
                     />
                   </label>
+                  <CategoryIconPicker
+                    groupName={`category-icon-edit-${category.id}`}
+                    legend="Icon"
+                    value={renameIconId}
+                    onChange={setRenameIconId}
+                  />
                   <div className="category-row-actions">
                     <button type="button" className="btn btn--primary" disabled={submitting} onClick={() => saveRename(category)}>
-                      Save name
+                      Save changes
                     </button>
                     <button type="button" className="btn" disabled={submitting} onClick={() => setRenameId(null)}>
                       Cancel
@@ -290,7 +341,15 @@ function CategoriesSection({ onStorageRestored }) {
                 </div>
               ) : pendingDeleteId === category.id ? (
                 <>
-                  <span className="category-row-name">{category.name}</span>
+                  <span className="category-row-leading">
+                    <span className="category-row-icon" aria-hidden="true">
+                      <CategoryExpenseIcon
+                        categoryId={category.id}
+                        customCategories={categories}
+                      />
+                    </span>
+                    <span className="category-row-name">{category.name}</span>
+                  </span>
                   <div className="category-row-actions category-row-actions--confirm">
                     <p className="category-delete-prompt">Delete this unused category?</p>
                     <button
@@ -308,7 +367,15 @@ function CategoriesSection({ onStorageRestored }) {
                 </>
               ) : (
                 <>
-                  <span className="category-row-name">{category.name}</span>
+                  <span className="category-row-leading">
+                    <span className="category-row-icon" aria-hidden="true">
+                      <CategoryExpenseIcon
+                        categoryId={category.id}
+                        customCategories={categories}
+                      />
+                    </span>
+                    <span className="category-row-name">{category.name}</span>
+                  </span>
                   <div className="category-row-actions">
                     <button
                       type="button"
@@ -316,6 +383,7 @@ function CategoriesSection({ onStorageRestored }) {
                       onClick={() => {
                         setRenameId(category.id)
                         setRenameName(category.name)
+                        setRenameIconId(category.iconId ?? defaultCategoryIconId(category.type))
                         setPendingDeleteId(null)
                         setActionError(null)
                       }}
@@ -339,9 +407,10 @@ function CategoriesSection({ onStorageRestored }) {
     <section className="category-settings settings-page" aria-labelledby="section-title">
       <PageHeader
         icon="settings"
+        variant="standard"
         title="Settings"
         tagline={PAGE_TAGLINES.settings}
-        description="Tune appearance, manage categories, and control backups—all stored locally in this browser unless you export a file."
+        description="Tune appearance, manage categories, and export transactions—all stored locally in this browser."
       />
 
       <div className="settings-page-stack">
@@ -393,7 +462,13 @@ function CategoriesSection({ onStorageRestored }) {
                       name="category-type"
                       value="expense"
                       checked={draft.type === 'expense'}
-                      onChange={() => setDraft((current) => ({ ...current, type: 'expense' }))}
+                      onChange={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          type: 'expense',
+                          iconId: defaultCategoryIconId('expense'),
+                        }))
+                      }
                     />
                     Expense
                   </label>
@@ -403,7 +478,13 @@ function CategoriesSection({ onStorageRestored }) {
                       name="category-type"
                       value="income"
                       checked={draft.type === 'income'}
-                      onChange={() => setDraft((current) => ({ ...current, type: 'income' }))}
+                      onChange={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          type: 'income',
+                          iconId: defaultCategoryIconId('income'),
+                        }))
+                      }
                     />
                     Income
                   </label>
@@ -421,6 +502,12 @@ function CategoriesSection({ onStorageRestored }) {
                     }
                   />
                 </label>
+                <CategoryIconPicker
+                  groupName="category-icon-add"
+                  legend="Icon"
+                  value={draft.iconId}
+                  onChange={(iconId) => setDraft((current) => ({ ...current, iconId }))}
+                />
               </div>
               {formErrors.length > 0 && (
                 <div className="category-alert" role="alert">
@@ -451,11 +538,7 @@ function CategoriesSection({ onStorageRestored }) {
           </section>
         )}
 
-        <BackupRestoreSection
-          onRestored={() => {
-            onStorageRestored?.()
-          }}
-        />
+        <TransactionExportSection />
       </div>
     </section>
   )

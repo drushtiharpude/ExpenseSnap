@@ -1,0 +1,829 @@
+/**
+ * ExpenseSnap Dashboard — premium visual system (scoped).
+ * Loaded with DashboardSection only; coordinates shell chrome via :has(.finance.dashboard).
+ */
+
+/* —— Shell chrome while Dashboard is mounted —— */
+.shell:has(.finance.dashboard) .shell-sidebar {
+  background: var(--shell-sidebar-bg);
+  border-inline-end-color: var(--shell-sidebar-border);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .shell:has(.finance.dashboard) .shell-sidebar {
+  box-shadow: none;
+}
+
+:root:not([data-theme='dark']) .shell:has(.finance.dashboard) .shell-nav-link[aria-current='page'] {
+  color: var(--text-h);
+  background: var(--shell-sidebar-active-bg);
+  border-color: var(--shell-sidebar-border);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+[data-theme='dark'] .shell:has(.finance.dashboard) .shell-nav-link[aria-current='page'] {
+  color: #e1e4ea;
+  background: #282d37;
+  border-color: #343a46;
+  box-shadow: inset 3px 0 0 #a3bfa8;
+}
+
+[data-theme='dark'] .shell:has(.finance.dashboard) .shell-nav-link[aria-current='page'] .shell-nav-icon {
+  color: #b7b4d8;
+  background: transparent;
+}
+
+.shell:has(.finance.dashboard) .shell-nav-icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  padding: 0.125rem;
+  border-radius: 0.375rem;
+}
+
+:root:not([data-theme='dark']) .shell:has(.finance.dashboard) .shell-nav-icon {
+  background: rgb(48 54 64 / 0.06);
+}
+
+:root:not([data-theme='dark']) .shell:has(.finance.dashboard) .shell-nav-link[aria-current='page'] .shell-nav-icon {
+  background: transparent;
+  color: var(--chart-1);
+}
+
+.shell:has(.finance.dashboard) .shell-sidebar-footer {
+  border-top-color: var(--shell-sidebar-border);
+}
+
+:root:not([data-theme='dark']) .shell:has(.finance.dashboard) .shell-sidebar-footer__signout {
+  background: #ffffff;
+  border-color: var(--shell-sidebar-border);
+}
+
+.shell:has(.finance.dashboard) .notification-centre__badge {
+  background: var(--money-expense);
+  border-color: var(--surface-elevated);
+  box-shadow: none;
+}
+
+/* Dashboard has no shell-app-header; restore main-column top padding */
+@media (min-width: 901px) {
+  .shell:has(.finance.dashboard) .shell-main {
+    padding-top: var(--space-6);
+  }
+}
+
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__control {
+  background: var(--surface-card);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-top-header .dashboard-month-nav__control {
+  background: #222630;
+  border-color: #343a46;
+}
+
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__step {
+  color: var(--text-muted);
+}
+
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__step:hover:not(:disabled) {
+  color: var(--text-h);
+  background: var(--surface-inset);
+}
+
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__input,
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__current {
+  color: var(--text-h);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-top-header .dashboard-month-nav__step:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.04);
+  color: #e1e4ea;
+}
+
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__step:focus-visible,
+.finance.dashboard .dashboard-top-header .dashboard-month-nav__input:focus-visible {
+  outline-color: var(--accent);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-top-header .dashboard-month-nav__step:focus-visible,
+[data-theme='dark'] .finance.dashboard .dashboard-top-header .dashboard-month-nav__input:focus-visible {
+  outline-color: #a3bfa8;
+}
+
+/* —— KPI roles (distinct identities) —— */
+.finance.dashboard .dashboard-kpi-card--role-income,
+.finance.dashboard .dashboard-kpi-card--role-expense,
+.finance.dashboard .dashboard-kpi-card--role-net,
+.finance.dashboard .dashboard-kpi-card--role-savings {
+  overflow: hidden;
+}
+
+.finance.dashboard .dashboard-kpi-card--role-income::before,
+.finance.dashboard .dashboard-kpi-card--role-expense::before,
+.finance.dashboard .dashboard-kpi-card--role-net::before,
+.finance.dashboard .dashboard-kpi-card--role-savings::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  pointer-events: none;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-income::before {
+  background: var(--money-income);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-expense::before {
+  background: var(--money-expense);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-net::before {
+  background: var(--money-balance);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-savings::before {
+  background: var(--chart-1);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-income::before {
+  background: var(--money-income);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-expense::before {
+  background: #d69a9a;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-net::before {
+  background: #a8b8d8;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-savings::before {
+  background: #b7b4d8;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-income {
+  --dash-kpi-accent: var(--money-income);
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-expense {
+  --dash-kpi-accent: var(--money-expense);
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-net {
+  --dash-kpi-accent: var(--money-balance);
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-savings {
+  --dash-kpi-accent: var(--chart-1);
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-net .dashboard-kpi-icon {
+  color: var(--money-balance);
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-savings .dashboard-kpi-icon {
+  color: var(--chart-1);
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-income .dashboard-kpi-value {
+  color: var(--money-income);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-net .dashboard-kpi-value {
+  color: var(--money-balance);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-expense .dashboard-kpi-value {
+  color: var(--money-expense);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-kpi-card--role-savings .dashboard-kpi-value {
+  color: var(--chart-1);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-income .dashboard-kpi-value {
+  color: var(--money-income);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-expense .dashboard-kpi-value {
+  color: #d69a9a;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-net .dashboard-kpi-value {
+  color: #a8b8d8;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-kpi-card--role-savings .dashboard-kpi-value {
+  color: #b7b4d8;
+}
+
+/* —— Chart card modifiers —— */
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-chart-card--spending,
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-chart-card--cashflow {
+  background: var(--surface-elevated);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--spending,
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--cashflow {
+  background: #222630;
+  border-color: #343a46;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--spending .section-head--in-panel,
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--cashflow .section-head--in-panel {
+  border-bottom-color: #343a46;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-chart-card--spending .section-head--in-panel,
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-chart-card--cashflow .section-head--in-panel {
+  border-bottom-color: var(--border-subtle);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--spending .section-head--in-panel,
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card--cashflow .section-head--in-panel {
+  border-bottom-color: var(--border);
+}
+
+.finance.dashboard .dashboard-donut-center {
+  padding: var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elevated) 88%, var(--surface-0));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border-subtle) 80%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.5);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-donut-center {
+  background: color-mix(in srgb, var(--surface-inset) 70%, var(--surface-elevated));
+  box-shadow: 0 0 0 1px var(--border-subtle);
+}
+
+.finance.dashboard .dashboard-cashflow-legend li {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+}
+
+/* —— Budget / month net compact —— */
+.finance.dashboard .dashboard-budget-compact {
+  position: relative;
+  overflow: hidden;
+}
+
+.finance.dashboard .dashboard-budget-compact::before {
+  display: none;
+}
+
+.finance.dashboard .dashboard-safe-to-spend--warn .dashboard-sts-status--warn {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 0 0 1px color-mix(in srgb, var(--alert-warning-border) 25%, transparent);
+}
+
+/* —— Savings, insight, activity surfaces —— */
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-block.dashboard-savings {
+  background: var(--surface-card);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-savings-item:nth-child(3n + 1),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-savings-item:nth-child(3n + 2),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-savings-item:nth-child(3n) {
+  border-color: var(--border-subtle);
+}
+
+.finance.dashboard .dashboard-insight {
+  position: relative;
+}
+
+.finance.dashboard .dashboard-insight::after {
+  display: none;
+}
+
+/* —— Empty, onboarding, alerts —— */
+.finance.dashboard .dashboard-empty-inline {
+  background: var(--surface-inset);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 14%, var(--border));
+  box-shadow: none;
+}
+
+.finance.dashboard .dashboard-month-empty {
+  background: var(--surface-card);
+  border-style: solid;
+  border-color: var(--border-subtle);
+  box-shadow: var(--dashboard-card-shadow, var(--shadow-card));
+}
+
+.finance.dashboard .dashboard-onboarding {
+  background: var(--surface-card);
+}
+
+.finance.dashboard .dashboard-onboarding-icon {
+  background: var(--accent-bg);
+  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border-subtle));
+}
+
+.finance.dashboard .form-alert {
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--alert-warning-text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* —— Welcome + page banner refinement —— */
+.finance.dashboard .dashboard-greeting-hero__inner {
+  position: relative;
+  z-index: 1;
+}
+
+.finance.dashboard .page-banner.page-banner--hero::after {
+  display: none;
+}
+
+.finance.dashboard .page-banner.page-banner--hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.finance.dashboard .page-banner.page-banner--hero .page-banner__icon {
+  background: var(--page-banner-hero-icon-bg);
+  border-color: var(--page-banner-hero-icon-border);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .page-banner.page-banner--hero .page-banner__icon {
+  background: rgb(163 191 168 / 0.14);
+  border-color: rgb(163 191 168 / 0.32);
+  box-shadow: none;
+}
+
+/* —— Recent activity —— */
+.finance.dashboard .dashboard-activity-amount {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--alert-error-bg) 55%, transparent);
+}
+
+.finance.dashboard .dashboard-overview-footnote {
+  padding-top: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell:has(.finance.dashboard) .shell-nav-link {
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Secondary dashboard cards — charts, savings, insight, activity
+   (KPI row retains existing role-based styling above)
+   ═══════════════════════════════════════════════════════════════ */
+
+.finance.dashboard .dashboard-chart-card {
+  box-shadow:
+    var(--dashboard-card-shadow, var(--shadow-card)),
+    var(--dashboard-edge-highlight);
+}
+
+.finance.dashboard .dashboard-chart-card .section-head__title {
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.015em;
+  color: var(--dash-ink, var(--text-h));
+}
+
+.finance.dashboard .dashboard-chart-card .section-head__sub {
+  color: color-mix(in srgb, var(--dash-ink, var(--text-h)) 52%, var(--text));
+}
+
+/* —— 1. Spending by category —— */
+.finance.dashboard .dashboard-donut-visual {
+  filter: none;
+}
+
+.finance.dashboard .dashboard-donut-visual::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 7%, transparent) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-donut-visual::before {
+  background: radial-gradient(circle, rgb(163 191 168 / 0.1) 0%, transparent 68%);
+}
+
+.finance.dashboard .dashboard-donut-svg {
+  position: relative;
+  z-index: 1;
+}
+
+.finance.dashboard .dashboard-donut-center-label {
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.625rem;
+  color: color-mix(in srgb, var(--dash-ink, var(--text-h)) 55%, var(--text));
+}
+
+.finance.dashboard .dashboard-donut-center-value {
+  font-weight: var(--font-weight-semibold);
+  color: var(--dash-ink, var(--text-h));
+}
+
+.finance.dashboard .dashboard-donut-legend {
+  gap: var(--space-2);
+}
+
+.finance.dashboard .dashboard-donut-legend-item {
+  box-shadow: 0 1px 2px rgb(12 22 40 / 0.04);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-donut-legend-item:nth-child(4n + 1),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-donut-legend-item:nth-child(4n + 2),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-donut-legend-item:nth-child(4n + 3),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-donut-legend-item:nth-child(4n) {
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+.finance.dashboard .dashboard-chart-empty {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  border: 1px dashed color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+/* —— 2. Monthly cash flow —— */
+.finance.dashboard .dashboard-cashflow {
+  padding: var(--space-2) var(--space-1) 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 90%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-cashflow {
+  background: color-mix(in srgb, var(--surface-inset) 55%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.finance.dashboard .dashboard-cashflow-month-label {
+  font-weight: var(--font-weight-medium);
+  fill: color-mix(in srgb, var(--dash-ink, var(--text-h)) 70%, var(--text));
+}
+
+.finance.dashboard .dashboard-cashflow-legend {
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-cashflow-swatch--income {
+  background: var(--money-income);
+  box-shadow: none;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-cashflow-swatch--expense {
+  background: var(--money-expense);
+  box-shadow: none;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-cashflow {
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-cashflow-swatch--income {
+  background: var(--money-income);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-cashflow-swatch--expense {
+  background: var(--money-expense);
+  box-shadow: none;
+}
+
+/* —— 3. Savings goals —— */
+.finance.dashboard .dashboard-block.dashboard-savings {
+  box-shadow:
+    var(--dashboard-card-shadow, var(--shadow-card)),
+    var(--dashboard-edge-highlight);
+}
+
+.finance.dashboard .dashboard-savings-item {
+  background: var(--surface-inset);
+  box-shadow: none;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-savings-item {
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-savings-item {
+  background: #282d37;
+  border-color: #343a46;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-savings-item:nth-child(3n + 1),
+[data-theme='dark'] .finance.dashboard .dashboard-savings-item:nth-child(3n + 2),
+[data-theme='dark'] .finance.dashboard .dashboard-savings-item:nth-child(3n) {
+  border-color: #343a46;
+}
+
+.finance.dashboard .dashboard-savings-ring-track {
+  stroke: var(--border-subtle);
+  opacity: 0.95;
+}
+
+.finance.dashboard .dashboard-savings-ring-progress {
+  stroke: var(--money-income);
+  stroke-linecap: round;
+  filter: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-savings-ring-track {
+  stroke: #343a46;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-savings-ring-progress {
+  stroke: var(--money-income);
+  filter: none;
+}
+
+.finance.dashboard .dashboard-savings-ring--complete .dashboard-savings-ring-progress {
+  stroke: var(--money-income);
+  filter: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-savings-ring--complete .dashboard-savings-ring-progress {
+  stroke: var(--money-income);
+  filter: none;
+}
+
+.finance.dashboard .dashboard-savings-ring-label {
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-semibold);
+  color: var(--dash-ink, var(--text-h));
+}
+
+.finance.dashboard .dashboard-savings-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--dash-ink, var(--text-h));
+}
+
+.finance.dashboard .dashboard-savings-amount {
+  color: color-mix(in srgb, var(--dash-ink, var(--text-h)) 65%, var(--text));
+}
+
+.finance.dashboard .dashboard-block.dashboard-savings .dashboard-sts-foot .btn {
+  box-shadow: 0 1px 2px rgb(12 22 40 / 0.06);
+}
+
+/* —— 4. Budget watch / insight —— */
+.finance.dashboard .dashboard-insight {
+  padding-block: var(--space-4);
+  overflow: hidden;
+}
+
+.finance.dashboard .dashboard-insight-body {
+  margin-top: var(--space-2);
+  max-width: 48rem;
+  line-height: var(--line-height-body);
+  color: color-mix(in srgb, var(--dash-ink, var(--text-h)) 58%, var(--text));
+}
+
+.finance.dashboard .dashboard-insight-title {
+  position: relative;
+  padding-inline-start: 2rem;
+}
+
+.finance.dashboard .dashboard-insight-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.375rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  box-shadow: none;
+}
+
+.finance.dashboard .dashboard-insight-title::after {
+  content: 'i';
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 1.375rem;
+  height: 1.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+  font-style: italic;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::before {
+  background: var(--surface-inset);
+  border-color: color-mix(in srgb, var(--alert-warning-border) 40%, var(--border-subtle));
+}
+
+.finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::after {
+  content: '!';
+  font-style: normal;
+  color: var(--alert-warning-text);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight:not(.dashboard-insight--budget-watch),
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight--budget-watch {
+  background: var(--surface-elevated);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight--budget-watch {
+  border-color: color-mix(in srgb, #8a7350 32%, var(--border-subtle));
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight-title::before {
+  background: var(--surface-inset);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight-title::after {
+  color: var(--accent);
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::before {
+  background: var(--surface-inset);
+  border-color: color-mix(in srgb, #8a7350 28%, var(--border-subtle));
+}
+
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::after {
+  color: #8a7350;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::before {
+  background: #282d37;
+  border-color: #343a46;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-insight--budget-watch .dashboard-insight-title::after {
+  color: #c4b896;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-insight:not(.dashboard-insight--budget-watch) .dashboard-insight-title::before {
+  background: #282d37;
+  border-color: #343a46;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-insight:not(.dashboard-insight--budget-watch) .dashboard-insight-title::after {
+  color: #a3bfa8;
+}
+
+/* —— 5. Recent activity —— */
+:root:not([data-theme='dark']) .finance.dashboard .dashboard-block--recent {
+  background: var(--surface-elevated);
+  border-color: var(--border-subtle);
+  box-shadow: var(--dashboard-card-shadow, var(--shadow-card));
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-block--recent {
+  background: #222630;
+  border-color: #343a46;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-month-empty,
+[data-theme='dark'] .finance.dashboard .dashboard-onboarding {
+  background: #222630;
+  border-color: #343a46;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-onboarding-icon {
+  background: rgb(163 191 168 / 0.14);
+  border-color: rgb(163 191 168 / 0.32);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-cashflow {
+  background: #282d37;
+  border-color: #343a46;
+  box-shadow: none;
+}
+
+.finance.dashboard .dashboard-activity-list {
+  border-color: color-mix(in srgb, var(--dash-navy, #0c1628) 8%, var(--border-subtle));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 1px 2px rgb(12 22 40 / 0.04);
+}
+
+.finance.dashboard .dashboard-activity-item:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-inset) 35%, transparent);
+}
+
+.finance.dashboard .dashboard-activity-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--dash-ink, var(--text-h));
+}
+
+.finance.dashboard .dashboard-activity-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: color-mix(in srgb, var(--dash-ink, var(--text-h)) 48%, var(--text));
+}
+
+.finance.dashboard .dashboard-activity-amount {
+  border: 1px solid color-mix(in srgb, var(--money-expense) 22%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+
+.finance.dashboard .dashboard-activity-amount.amount--expense {
+  color: var(--money-expense);
+  background: var(--alert-error-bg);
+}
+
+.finance.dashboard .dashboard-activity-amount.amount--income {
+  color: var(--money-income);
+  border-color: color-mix(in srgb, var(--money-income) 25%, transparent);
+  background: var(--alert-success-bg);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-activity-item:nth-child(even) {
+  background: rgb(255 255 255 / 0.02);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-activity-list {
+  box-shadow: none;
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-activity-amount.amount--expense,
+[data-theme='dark'] .finance.dashboard .dashboard-activity-amount.amount--income {
+  background: #282d37;
+  box-shadow: none;
+}
+
+/* —— 6. Budget / month net + shared empty states —— */
+.finance.dashboard .dashboard-budget-compact {
+  box-shadow:
+    var(--dashboard-card-shadow, var(--shadow-card)),
+    var(--dashboard-edge-highlight);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-budget-compact {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
+[data-theme='dark'] .finance.dashboard .dashboard-chart-card {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
+.finance.dashboard .dashboard-budget-compact > * {
+  position: relative;
+  z-index: 1;
+}
+
+.finance.dashboard .dashboard-chart-card > .dashboard-empty-inline,
+.finance.dashboard .dashboard-block.dashboard-savings > .dashboard-empty-inline {
+  margin-top: var(--space-2);
+}

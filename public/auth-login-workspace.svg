@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="window-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="40%" stop-color="#e8eef5"/>
+      <stop offset="100%" stop-color="#dce8f0"/>
+    </linearGradient>
+    <linearGradient id="desk-wood" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ebe4d9"/>
+      <stop offset="100%" stop-color="#d8cfc2"/>
+    </linearGradient>
+    <linearGradient id="mug" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <filter id="blur-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="32"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#window-light)"/>
+  <ellipse cx="420" cy="200" rx="360" ry="200" fill="#b8d9d4" opacity="0.28" filter="url(#blur-soft)"/>
+  <ellipse cx="1100" cy="160" rx="420" ry="260" fill="#c7d9ed" opacity="0.35" filter="url(#blur-soft)"/>
+  <rect x="920" y="0" width="680" height="520" fill="#eef4fb" opacity="0.65"/>
+  <path d="M920 80 L1600 80 L1600 480 L920 520 Z" fill="#f8fafc" opacity="0.5"/>
+  <path d="M0 580 Q520 520 960 560 T1600 600 L1600 900 L0 900 Z" fill="url(#desk-wood)" opacity="0.85"/>
+  <rect x="180" y="520" width="220" height="140" rx="6" fill="#1e293b" opacity="0.88" transform="rotate(-4 180 520)"/>
+  <rect x="200" y="540" width="180" height="8" rx="2" fill="#f8fafc" opacity="0.15" transform="rotate(-4 200 540)"/>
+  <rect x="200" y="558" width="140" height="6" rx="2" fill="#f8fafc" opacity="0.1" transform="rotate(-4 200 558)"/>
+  <rect x="420" y="600" width="120" height="8" rx="4" fill="#334155" opacity="0.75" transform="rotate(18 420 600)"/>
+  <ellipse cx="520" cy="640" rx="52" ry="38" fill="url(#mug)" opacity="0.95"/>
+  <ellipse cx="520" cy="628" rx="44" ry="10" fill="#cbd5e1"/>
+  <path d="M560 610 Q580 580 600 610" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="280" cy="480" rx="36" ry="48" fill="#86efac" opacity="0.35" filter="url(#blur-soft)"/>
+  <path d="M268 520 Q280 440 292 520" fill="#22c55e" opacity="0.25"/>
+  <circle cx="720" cy="380" r="120" fill="#ffffff" opacity="0.35" filter="url(#blur-soft)"/>
+</svg>

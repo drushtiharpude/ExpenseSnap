@@ -93,12 +93,12 @@
 }
 
 .theme-choice-preview--light {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  background: linear-gradient(180deg, #f4f5f2 0%, #eaeee8 100%);
 }
 
 .theme-choice-preview--dark {
-  background: linear-gradient(180deg, #1e2430 0%, #12161f 100%);
-  border-color: color-mix(in srgb, #fff 12%, var(--border-subtle));
+  background: #171a21;
+  border-color: var(--border-subtle);
 }
 
 .theme-choice-preview-bar {
@@ -120,7 +120,7 @@
 }
 
 .theme-choice-preview--light .theme-choice-preview-line {
-  background: color-mix(in srgb, #334155 22%, transparent);
+  background: color-mix(in srgb, #252b28 22%, transparent);
 }
 
 .theme-choice-preview--dark .theme-choice-preview-line {

@@ -8,11 +8,19 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:regression": "node scripts/regression-check.mjs"
+    "test:regression": "node scripts/regression-check.mjs",
+    "test:migration": "node scripts/migration-check.mjs",
+    "test:auth": "node scripts/local-demo-auth-check.mjs",
+    "test:export": "node scripts/export-check.mjs",
+    "test:notification": "node scripts/notification-check.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

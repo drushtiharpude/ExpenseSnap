@@ -6,6 +6,7 @@ export const PAGE_TAGLINES = {
   analytics: 'Discover your spending habits.',
   budgets: 'Stay on track, without the stress.',
   bills: 'Never miss rent, subscriptions, or renewals.',
-  coach: 'Your priority for this month.',
+  savings: 'Turn plans into progress, one deposit at a time.',
   settings: 'Make ExpenseSnap yours.',
+  profile: 'Your identity on this device.',
 }

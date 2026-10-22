@@ -20,6 +20,13 @@ import {
   restoreRecurringBillsStorageRaw,
   saveRecurringBills,
 } from './recurringBillStore.js'
+import { validateSavingsGoals } from './savingsGoal.js'
+import {
+  readSavingsGoals,
+  readSavingsGoalsStorageRaw,
+  restoreSavingsGoalsStorageRaw,
+  saveSavingsGoals,
+} from './savingsGoalStore.js'
 import {
   readTransactions,
   readTransactionsStorageRaw,
@@ -28,11 +35,17 @@ import {
 } from './transactionStore.js'
 import { isCategoryIdAllowedForTransaction } from '../transactions/categories.js'
 
-export const BACKUP_VERSION = 3
+export const BACKUP_VERSION = 4
 export const BACKUP_VERSION_V1 = 1
 export const BACKUP_VERSION_V2 = 2
+export const BACKUP_VERSION_V3 = 3
 
-const SUPPORTED_BACKUP_VERSIONS = new Set([BACKUP_VERSION_V1, BACKUP_VERSION_V2, BACKUP_VERSION])
+const SUPPORTED_BACKUP_VERSIONS = new Set([
+  BACKUP_VERSION_V1,
+  BACKUP_VERSION_V2,
+  BACKUP_VERSION_V3,
+  BACKUP_VERSION,
+])
 const BACKUP_FIELDS_V1 = ['backupVersion', 'exportedAt', 'transactions', 'categories']
 const BACKUP_FIELDS_V2 = ['backupVersion', 'exportedAt', 'transactions', 'categories', 'budgets']
 const BACKUP_FIELDS_V3 = [
@@ -42,6 +55,15 @@ const BACKUP_FIELDS_V3 = [
   'categories',
   'budgets',
   'recurringBills',
+]
+const BACKUP_FIELDS_V4 = [
+  'backupVersion',
+  'exportedAt',
+  'transactions',
+  'categories',
+  'budgets',
+  'recurringBills',
+  'savingsGoals',
 ]
 const TIMESTAMP_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/
@@ -61,10 +83,18 @@ function recordsEqual(left, right) {
 }
 
 function backupIncludesBudgets(backupVersion) {
-  return backupVersion === BACKUP_VERSION_V2 || backupVersion === BACKUP_VERSION
+  return (
+    backupVersion === BACKUP_VERSION_V2 ||
+    backupVersion === BACKUP_VERSION_V3 ||
+    backupVersion === BACKUP_VERSION
+  )
 }
 
 function backupIncludesRecurringBills(backupVersion) {
+  return backupVersion === BACKUP_VERSION_V3 || backupVersion === BACKUP_VERSION
+}
+
+function backupIncludesSavingsGoals(backupVersion) {
   return backupVersion === BACKUP_VERSION
 }
 
@@ -88,6 +118,7 @@ export function createBackupDocument(
   categories,
   budgets = [],
   recurringBills = [],
+  savingsGoals = [],
   now = new Date(),
 ) {
   return {
@@ -97,6 +128,7 @@ export function createBackupDocument(
     categories,
     budgets,
     recurringBills,
+    savingsGoals,
   }
 }
 
@@ -124,7 +156,7 @@ function validateBackupFields(value, errors) {
     }
     return
   }
-  if (version === BACKUP_VERSION) {
+  if (version === BACKUP_VERSION_V3) {
     const keys = Object.keys(value)
     if (
       keys.length !== BACKUP_FIELDS_V3.length ||
@@ -132,6 +164,18 @@ function validateBackupFields(value, errors) {
     ) {
       errors.push(
         'Backup must contain only backupVersion, exportedAt, transactions, categories, budgets, and recurringBills.',
+      )
+    }
+    return
+  }
+  if (version === BACKUP_VERSION) {
+    const keys = Object.keys(value)
+    if (
+      keys.length !== BACKUP_FIELDS_V4.length ||
+      BACKUP_FIELDS_V4.some((field) => !Object.hasOwn(value, field))
+    ) {
+      errors.push(
+        'Backup must contain only backupVersion, exportedAt, transactions, categories, budgets, recurringBills, and savingsGoals.',
       )
     }
   }
@@ -190,6 +234,14 @@ export function validateBackupDocument(value) {
     }
   }
 
+  let savingsGoalsResult = { ok: true, goals: [] }
+  if (backupIncludesSavingsGoals(value.backupVersion)) {
+    savingsGoalsResult = validateSavingsGoals(value.savingsGoals)
+    if (!savingsGoalsResult.ok) {
+      errors.push(...savingsGoalsResult.errors)
+    }
+  }
+
   if (errors.length > 0) return { ok: false, errors }
 
   const referenceResult = validateTransactionCategoryReferences(
@@ -210,6 +262,7 @@ export function validateBackupDocument(value) {
 
   const includesBudgets = backupIncludesBudgets(value.backupVersion)
   const includesRecurringBills = backupIncludesRecurringBills(value.backupVersion)
+  const includesSavingsGoals = backupIncludesSavingsGoals(value.backupVersion)
 
   return {
     ok: true,
@@ -220,8 +273,10 @@ export function validateBackupDocument(value) {
       categories: categoriesResult.categories,
       budgets: includesBudgets ? budgetsResult.budgets : [],
       recurringBills: includesRecurringBills ? recurringBillsResult.bills : [],
+      savingsGoals: includesSavingsGoals ? savingsGoalsResult.goals : [],
       includesBudgets,
       includesRecurringBills,
+      includesSavingsGoals,
     },
   }
 }
@@ -275,6 +330,7 @@ export function mergeBackupData(
   backup,
   existingBudgets = [],
   existingRecurringBills = [],
+  existingSavingsGoals = [],
 ) {
   const categoriesMerge = mergeRecords(existingCategories, backup.categories, 'Category')
   if (!categoriesMerge.ok) return categoriesMerge
@@ -369,14 +425,34 @@ export function mergeBackupData(
     summary.recurringBillsKept = recurringMerge.kept
   }
 
+  let savingsMerge = { added: 0, kept: 0 }
+  let mergedSavingsGoals = existingSavingsGoals
+
+  if (backup.includesSavingsGoals) {
+    const savingsRecords = mergeRecords(existingSavingsGoals, backup.savingsGoals, 'Savings goal')
+    if (!savingsRecords.ok) return savingsRecords
+
+    const validatedSavings = validateSavingsGoals(savingsRecords.items)
+    if (!validatedSavings.ok) {
+      return { ok: false, errors: validatedSavings.errors }
+    }
+
+    savingsMerge = { added: savingsRecords.added, kept: savingsRecords.kept }
+    mergedSavingsGoals = validatedSavings.goals
+    summary.savingsGoalsAdded = savingsMerge.added
+    summary.savingsGoalsKept = savingsMerge.kept
+  }
+
   return {
     ok: true,
     transactions: validatedTransactions.transactions,
     categories: validatedCategories.categories,
     budgets: mergedBudgets,
     recurringBills: mergedRecurringBills,
+    savingsGoals: mergedSavingsGoals,
     writeBudgets: backup.includesBudgets,
     writeRecurringBills: backup.includesRecurringBills,
+    writeSavingsGoals: backup.includesSavingsGoals,
     summary,
   }
 }
@@ -387,6 +463,7 @@ export function buildReplaceData(backup) {
     transactionsRestored: backup.transactions.length,
     categoriesRestored: backup.categories.length,
     recurringBillsRestored: backup.recurringBills.length,
+    savingsGoalsRestored: backup.savingsGoals.length,
   }
   if (backup.includesBudgets) {
     summary.budgetsRestored = backup.budgets.length
@@ -398,8 +475,10 @@ export function buildReplaceData(backup) {
     categories: backup.categories,
     budgets: backup.includesBudgets ? backup.budgets : undefined,
     recurringBills: backup.recurringBills,
+    savingsGoals: backup.savingsGoals,
     writeBudgets: backup.includesBudgets,
     writeRecurringBills: true,
+    writeSavingsGoals: true,
     summary,
   }
 }
@@ -413,6 +492,7 @@ export function getBackupRestoreStorageState(storage) {
   const existingRecurringBills = readRecurringBills(storage, {
     customCategories: existingCategories.ok ? existingCategories.categories : [],
   })
+  const existingSavingsGoals = readSavingsGoals(storage)
   const transactionsMalformed =
     !existingTransactions.ok && existingTransactions.error === 'malformed'
   const categoriesMalformed =
@@ -420,31 +500,38 @@ export function getBackupRestoreStorageState(storage) {
   const budgetsMalformed = !existingBudgets.ok && existingBudgets.error === 'malformed'
   const recurringBillsMalformed =
     !existingRecurringBills.ok && existingRecurringBills.error === 'malformed'
+  const savingsGoalsMalformed =
+    !existingSavingsGoals.ok && existingSavingsGoals.error === 'malformed'
   const storageUnavailable =
     (!existingTransactions.ok && existingTransactions.error === 'unavailable') ||
     (!existingCategories.ok && existingCategories.error === 'unavailable') ||
     (!existingBudgets.ok && existingBudgets.error === 'unavailable') ||
-    (!existingRecurringBills.ok && existingRecurringBills.error === 'unavailable')
+    (!existingRecurringBills.ok && existingRecurringBills.error === 'unavailable') ||
+    (!existingSavingsGoals.ok && existingSavingsGoals.error === 'unavailable')
 
   return {
     existingTransactions,
     existingCategories,
     existingBudgets,
     existingRecurringBills,
+    existingSavingsGoals,
     transactionsMalformed,
     categoriesMalformed,
     budgetsMalformed,
     recurringBillsMalformed,
+    savingsGoalsMalformed,
     recoveryReplaceNeeded:
       transactionsMalformed ||
       categoriesMalformed ||
       budgetsMalformed ||
-      recurringBillsMalformed,
+      recurringBillsMalformed ||
+      savingsGoalsMalformed,
     mergeAllowed:
       existingTransactions.ok &&
       existingCategories.ok &&
       existingBudgets.ok &&
-      existingRecurringBills.ok,
+      existingRecurringBills.ok &&
+      existingSavingsGoals.ok,
     storageUnavailable,
   }
 }
@@ -466,12 +553,17 @@ function captureStorageSnapshot(storage) {
   if (!recurringBillsRaw.ok) {
     return { ok: false, errors: ['Saved recurring bills could not be read for recovery.'] }
   }
+  const savingsGoalsRaw = readSavingsGoalsStorageRaw(storage)
+  if (!savingsGoalsRaw.ok) {
+    return { ok: false, errors: ['Saved savings goals could not be read for recovery.'] }
+  }
   return {
     ok: true,
     transactionsRaw: transactionsRaw.raw,
     categoriesRaw: categoriesRaw.raw,
     budgetsRaw: budgetsRaw.raw,
     recurringBillsRaw: recurringBillsRaw.raw,
+    savingsGoalsRaw: savingsGoalsRaw.raw,
   }
 }
 
@@ -483,16 +575,19 @@ function restoreStorageSnapshot(storage, snapshot) {
     storage,
     snapshot.recurringBillsRaw,
   )
+  const savingsGoalsRestored = restoreSavingsGoalsStorageRaw(storage, snapshot.savingsGoalsRaw)
   return {
     ok:
       transactionsRestored.ok &&
       categoriesRestored.ok &&
       budgetsRestored.ok &&
-      recurringBillsRestored.ok,
+      recurringBillsRestored.ok &&
+      savingsGoalsRestored.ok,
     transactionsRestored: transactionsRestored.ok,
     categoriesRestored: categoriesRestored.ok,
     budgetsRestored: budgetsRestored.ok,
     recurringBillsRestored: recurringBillsRestored.ok,
+    savingsGoalsRestored: savingsGoalsRestored.ok,
   }
 }
 
@@ -503,6 +598,7 @@ function rollbackMessage(rollback) {
   if (!rollback.categoriesRestored) failed.push('categories')
   if (!rollback.budgetsRestored) failed.push('budgets')
   if (!rollback.recurringBillsRestored) failed.push('recurring bills')
+  if (!rollback.savingsGoalsRestored) failed.push('savings goals')
   return `Your previous saved data could not be put back automatically${
     failed.length > 0 ? ` (${failed.join(', ')})` : ''
   }.`
@@ -575,6 +671,20 @@ function applyRecoveryReplace(backup, storage) {
     }
   }
 
+  if (prepared.writeSavingsGoals) {
+    const savedSavings = saveSavingsGoals(prepared.savingsGoals, storage, writeOptions)
+    if (!savedSavings.ok) {
+      const rollback = restoreStorageSnapshot(storage, snapshot)
+      return {
+        ok: false,
+        errors: [
+          `Savings goals were not restored: ${savedSavings.error}.`,
+          rollbackMessage(rollback),
+        ],
+      }
+    }
+  }
+
   const savedTransactions = saveTransactions(prepared.transactions, storage, writeOptions)
   if (!savedTransactions.ok) {
     const rollback = restoreStorageSnapshot(storage, snapshot)
@@ -607,6 +717,10 @@ function applyRecoveryReplace(backup, storage) {
     })
     if (recurringRead.ok) result.recurringBills = recurringRead.bills
   }
+  if (prepared.writeSavingsGoals) {
+    const savingsRead = readSavingsGoals(storage)
+    if (savingsRead.ok) result.savingsGoals = savingsRead.goals
+  }
 
   return result
 }
@@ -616,6 +730,7 @@ function applyStandardRestore(mode, backup, state, storage) {
   const existingCategories = state.existingCategories
   const existingBudgets = state.existingBudgets
   const existingRecurringBills = state.existingRecurringBills
+  const existingSavingsGoals = state.existingSavingsGoals
 
   const prepared =
     mode === 'replace'
@@ -626,12 +741,14 @@ function applyStandardRestore(mode, backup, state, storage) {
           backup,
           existingBudgets.budgets,
           existingRecurringBills.bills,
+          existingSavingsGoals.goals,
         )
   if (!prepared.ok) return prepared
 
   const previousCategories = existingCategories.categories
   const previousBudgets = existingBudgets.budgets
   const previousRecurringBills = existingRecurringBills.bills
+  const previousSavingsGoals = existingSavingsGoals.goals
 
   const savedCategories = saveCategories(prepared.categories, storage)
   if (!savedCategories.ok) {
@@ -677,6 +794,24 @@ function applyStandardRestore(mode, backup, state, storage) {
     }
   }
 
+  if (prepared.writeSavingsGoals) {
+    const savedSavings = saveSavingsGoals(prepared.savingsGoals, storage)
+    if (!savedSavings.ok) {
+      const categoriesRollback = saveCategories(previousCategories, storage)
+      let budgetsMessage = categoriesRollbackMessage(categoriesRollback)
+      if (prepared.writeBudgets) {
+        const budgetsRollback = saveBudgets(previousBudgets, storage, {
+          customCategories: previousCategories,
+        })
+        budgetsMessage = categoriesBudgetsRollbackMessage(categoriesRollback, budgetsRollback)
+      }
+      return {
+        ok: false,
+        errors: [`Savings goals were not restored: ${savedSavings.error}.`, budgetsMessage],
+      }
+    }
+  }
+
   const savedTransactions = saveTransactions(prepared.transactions, storage)
   if (!savedTransactions.ok) {
     const categoriesRollback = saveCategories(previousCategories, storage)
@@ -693,6 +828,9 @@ function applyStandardRestore(mode, backup, state, storage) {
       saveRecurringBills(previousRecurringBills, storage, {
         customCategories: previousCategories,
       })
+    }
+    if (prepared.writeSavingsGoals) {
+      saveSavingsGoals(previousSavingsGoals, storage)
     }
     return {
       ok: false,
@@ -719,6 +857,12 @@ function applyStandardRestore(mode, backup, state, storage) {
     result.recurringBills = existingRecurringBills.bills
   }
 
+  if (prepared.writeSavingsGoals) {
+    result.savingsGoals = prepared.savingsGoals
+  } else if (existingSavingsGoals.ok) {
+    result.savingsGoals = existingSavingsGoals.goals
+  }
+
   return result
 }
 
@@ -735,6 +879,9 @@ function storageReadErrors(state) {
   }
   if (!state.existingRecurringBills.ok) {
     errors.push(`Saved recurring bills could not be read: ${state.existingRecurringBills.error}.`)
+  }
+  if (!state.existingSavingsGoals.ok) {
+    errors.push(`Saved savings goals could not be read: ${state.existingSavingsGoals.error}.`)
   }
   return errors
 }
@@ -787,11 +934,16 @@ export function readBackupForExport(storage) {
   if (!recurringBills.ok) {
     return { ok: false, error: recurringBills.error, errors: recurringBills.errors }
   }
+  const savingsGoals = readSavingsGoals(storage)
+  if (!savingsGoals.ok) {
+    return { ok: false, error: savingsGoals.error, errors: savingsGoals.errors }
+  }
   const document = createBackupDocument(
     transactions.transactions,
     categories.categories,
     budgets.budgets,
     recurringBills.bills,
+    savingsGoals.goals,
   )
   return {
     ok: true,
@@ -800,7 +952,8 @@ export function readBackupForExport(storage) {
       transactions.transactions.length === 0 &&
       categories.categories.length === 0 &&
       budgets.budgets.length === 0 &&
-      recurringBills.bills.length === 0,
+      recurringBills.bills.length === 0 &&
+      savingsGoals.goals.length === 0,
   }
 }
 

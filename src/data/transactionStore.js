@@ -1,3 +1,9 @@
+import {
+  readCloudTransactions,
+  readCloudTransactionsRaw,
+  saveCloudTransactions,
+} from './cloudFinanceStore.js'
+import { isCloudFinanceActive } from './financeSession.js'
 import { validateTransactions } from './transaction.js'
 
 /** Plain JSON in localStorage for this browser profile. It is not encrypted. */
@@ -66,6 +72,7 @@ function parseStored(raw) {
 }
 
 export function readTransactions(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudTransactions()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
 
@@ -77,6 +84,7 @@ export function readTransactions(storage) {
 
 /** Raw string for the key, or null when the key is absent. */
 export function readTransactionsStorageRaw(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudTransactionsRaw()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
   return readRaw(target)
@@ -98,6 +106,9 @@ export function restoreTransactionsStorageRaw(storage, raw) {
 }
 
 export function saveTransactions(transactions, storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) {
+    return saveCloudTransactions(transactions)
+  }
   const validated = validateTransactions(transactions)
   if (!validated.ok) return { ok: false, error: 'invalid', errors: validated.errors }
 

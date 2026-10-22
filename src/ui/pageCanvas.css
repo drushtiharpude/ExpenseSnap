@@ -1,0 +1,30 @@
+/**
+ * Route-scoped main content canvases (shell-main only while each page is mounted).
+ * Sidebar and global tokens unchanged; cards keep their own elevated surfaces.
+ */
+
+.shell-main:has(.finance.dashboard),
+.shell-main:has(section.transactions),
+.shell-main:has(.finance.bill-splitter),
+.shell-main:has(.finance.analytics),
+.shell-main:has(.finance.budgets),
+.shell-main:has(.finance-page.savings-goals),
+.shell-main:has(.category-settings.settings-page),
+.shell-main:has(.finance-page.profile-page),
+.shell-main:has(.finance-page.recurring-bills) {
+  background-color: #f4f5f2;
+  background-image: none;
+}
+
+[data-theme='dark'] .shell-main:has(.finance.dashboard),
+[data-theme='dark'] .shell-main:has(section.transactions),
+[data-theme='dark'] .shell-main:has(.finance.bill-splitter),
+[data-theme='dark'] .shell-main:has(.finance.analytics),
+[data-theme='dark'] .shell-main:has(.finance.budgets),
+[data-theme='dark'] .shell-main:has(.finance-page.savings-goals),
+[data-theme='dark'] .shell-main:has(.category-settings.settings-page),
+[data-theme='dark'] .shell-main:has(.finance-page.profile-page),
+[data-theme='dark'] .shell-main:has(.finance-page.recurring-bills) {
+  background-color: #171a21;
+  background-image: none;
+}

@@ -87,18 +87,22 @@ function groupActiveBills(bills, today) {
   return { overdue, dueToday, upcoming, later }
 }
 
-function BillGroup({ title, bills, payingId, onPay, onEdit, onTogglePause, onDelete, submitting }) {
+function BillGroup({ title, tone, bills, payingId, onPay, onEdit, onTogglePause, onDelete, submitting }) {
   if (bills.length === 0) return null
+  const groupClass = tone ? ` recurring-bills-group--${tone}` : ''
   return (
-    <section className="finance-panel" aria-labelledby={`bill-group-${title}`}>
+    <section
+      className={`finance-panel recurring-bills-group${groupClass}`}
+      aria-labelledby={`bill-group-${title}`}
+    >
       <header className="finance-panel-head">
         <h3 id={`bill-group-${title}`} className="finance-panel-title">
           {title}
         </h3>
       </header>
-      <ul className="budget-list">
+      <ul className="budget-list recurring-bills-list">
         {bills.map((bill) => (
-          <li key={bill.id} className="budget-row">
+          <li key={bill.id} className="budget-row recurring-bill-row">
             <div className="budget-row-main">
               <span className="budget-row-icon" aria-hidden>
                 <RecurringBillIcon />
@@ -106,8 +110,14 @@ function BillGroup({ title, bills, payingId, onPay, onEdit, onTogglePause, onDel
               <div className="budget-row-copy">
                 <p className="budget-row-title">{bill.title}</p>
                 <p className="budget-row-meta">
-                  {formatInrFromPaise(bill.amountPaise)} · {frequencyLabel(bill.frequency)} · Due{' '}
-                  {bill.nextDueDate}
+                  <span className="recurring-bill-frequency">{frequencyLabel(bill.frequency)}</span>
+                  <span className="recurring-bill-meta-sep" aria-hidden>
+                    {' '}
+                    ·{' '}
+                  </span>
+                  <span className="recurring-bill-due">
+                    Due <time dateTime={bill.nextDueDate}>{bill.nextDueDate}</time>
+                  </span>
                 </p>
               </div>
               <p className="budget-row-amount">{formatInrFromPaise(bill.amountPaise)}</p>
@@ -145,9 +155,11 @@ function RecurringBillsSection() {
   const [formErrors, setFormErrors] = useState([])
   const [actionError, setActionError] = useState(null)
   const [editId, setEditId] = useState(null)
+  const [addFormOpen, setAddFormOpen] = useState(false)
   const [payingId, setPayingId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const showBillForm = addFormOpen || editId !== null
 
   const bills = storageState.bills
   const categories = storageState.categories
@@ -228,6 +240,7 @@ function RecurringBillsSection() {
       persist(bills.map((bill) => (bill.id === editId ? updated.bill : bill)))
       setEditId(null)
       setDraft(emptyDraft(today))
+      setAddFormOpen(false)
       return
     }
 
@@ -239,10 +252,26 @@ function RecurringBillsSection() {
     }
     if (persist([...bills, created.bill])) {
       setDraft(emptyDraft(today))
+      setAddFormOpen(false)
     }
   }
 
+  function openAddForm() {
+    setEditId(null)
+    setDraft(emptyDraft(today))
+    setFormErrors([])
+    setAddFormOpen(true)
+  }
+
+  function closeBillForm() {
+    setEditId(null)
+    setDraft(emptyDraft(today))
+    setFormErrors([])
+    setAddFormOpen(false)
+  }
+
   function startEdit(bill) {
+    setAddFormOpen(false)
     setEditId(bill.id)
     setDraft({
       title: bill.title,
@@ -252,12 +281,6 @@ function RecurringBillsSection() {
       nextDueDate: bill.nextDueDate,
       status: bill.status,
     })
-    setFormErrors([])
-  }
-
-  function cancelEdit() {
-    setEditId(null)
-    setDraft(emptyDraft(today))
     setFormErrors([])
   }
 
@@ -304,9 +327,10 @@ function RecurringBillsSection() {
 
   if (storageState.loadError) {
     return (
-      <div className="finance-page">
+      <div className="finance-page recurring-bills">
         <PageHeader
           icon="bills"
+          variant="standard"
           title="Recurring Bills"
           tagline={PAGE_TAGLINES.bills}
           description="Track due dates locally. Expenses are recorded only when you mark a bill paid."
@@ -322,98 +346,108 @@ function RecurringBillsSection() {
   }
 
   return (
-    <div className="finance-page">
+    <div className="finance-page recurring-bills">
       <PageHeader
         icon="bills"
+        variant="standard"
         title="Recurring Bills"
         tagline={PAGE_TAGLINES.bills}
         description="Track due dates locally. Expenses are recorded only when you mark a bill paid."
-      />
+      >
+        <button
+          type="button"
+          className="btn btn--primary recurring-bills-add-toggle"
+          disabled={submitting}
+          onClick={openAddForm}
+        >
+          + Add Recurring Bill
+        </button>
+      </PageHeader>
 
-      <section className="finance-panel" aria-labelledby="recurring-bill-form">
-        <header className="finance-panel-head">
-          <h2 id="recurring-bill-form" className="finance-panel-title">
-            {editId ? 'Edit bill' : 'Add recurring bill'}
-          </h2>
-          <p className="finance-panel-sub">
-            Scheduled bills stay here until you mark them paid—then one expense is recorded and the
-            next due date moves forward.
-          </p>
-        </header>
-        <form className="finance-form" onSubmit={handleSubmit}>
-          {formErrors.length > 0 && (
-            <ul className="form-errors" role="alert">
-              {formErrors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          )}
-          <label>
-            Title
-            <input
-              value={draft.title}
-              maxLength={128}
-              required
-              onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label>
-            Amount (₹)
-            <input
-              inputMode="decimal"
-              value={draft.amountRupees}
-              required
-              onChange={(event) => setDraft((current) => ({ ...current, amountRupees: event.target.value }))}
-            />
-          </label>
-          <label>
-            Category
-            <span className="field-icon" aria-hidden>
-              <CategoryExpenseIcon />
-            </span>
-            <select
-              value={draft.categoryId}
-              onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))}
-            >
-              {expenseCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label ?? category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Frequency
-            <select
-              value={draft.frequency}
-              onChange={(event) => setDraft((current) => ({ ...current, frequency: event.target.value }))}
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </label>
-          <label>
-            Next due date
-            <input
-              type="date"
-              value={draft.nextDueDate}
-              required
-              onChange={(event) => setDraft((current) => ({ ...current, nextDueDate: event.target.value }))}
-            />
-          </label>
-          <div className="finance-form-actions">
-            <button type="submit" className="btn btn--primary" disabled={submitting}>
-              {editId ? 'Save changes' : 'Add bill'}
-            </button>
-            {editId ? (
-              <button type="button" className="btn" disabled={submitting} onClick={cancelEdit}>
+      {showBillForm ? (
+        <section className="finance-panel" aria-labelledby="recurring-bill-form">
+          <header className="finance-panel-head">
+            <h2 id="recurring-bill-form" className="finance-panel-title">
+              {editId ? 'Edit bill' : 'Add recurring bill'}
+            </h2>
+            <p className="finance-panel-sub">
+              Scheduled bills stay here until you mark them paid—then one expense is recorded and the
+              next due date moves forward.
+            </p>
+          </header>
+          <form className="finance-form" onSubmit={handleSubmit}>
+            {formErrors.length > 0 && (
+              <ul className="form-errors" role="alert">
+                {formErrors.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            )}
+            <label>
+              Title
+              <input
+                value={draft.title}
+                maxLength={128}
+                required
+                onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+              />
+            </label>
+            <label>
+              Amount (₹)
+              <input
+                inputMode="decimal"
+                value={draft.amountRupees}
+                required
+                onChange={(event) => setDraft((current) => ({ ...current, amountRupees: event.target.value }))}
+              />
+            </label>
+            <label>
+              Category
+              <span className="field-icon" aria-hidden>
+                <CategoryExpenseIcon />
+              </span>
+              <select
+                value={draft.categoryId}
+                onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))}
+              >
+                {expenseCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.label ?? category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Frequency
+              <select
+                value={draft.frequency}
+                onChange={(event) => setDraft((current) => ({ ...current, frequency: event.target.value }))}
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </label>
+            <label>
+              Next due date
+              <input
+                type="date"
+                value={draft.nextDueDate}
+                required
+                onChange={(event) => setDraft((current) => ({ ...current, nextDueDate: event.target.value }))}
+              />
+            </label>
+            <div className="finance-form-actions">
+              <button type="submit" className="btn btn--primary" disabled={submitting}>
+                {editId ? 'Save changes' : 'Add bill'}
+              </button>
+              <button type="button" className="btn" disabled={submitting} onClick={closeBillForm}>
                 Cancel
               </button>
-            ) : null}
-          </div>
-        </form>
-      </section>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       {actionError ? (
         <div className="alert alert--error" role="alert">
@@ -421,8 +455,10 @@ function RecurringBillsSection() {
         </div>
       ) : null}
 
+      <div className="recurring-bills-groups">
       <BillGroup
         title="Overdue"
+        tone="overdue"
         bills={groups.overdue}
         payingId={payingId}
         onPay={handlePay}
@@ -433,6 +469,7 @@ function RecurringBillsSection() {
       />
       <BillGroup
         title="Due today"
+        tone="due-today"
         bills={groups.dueToday}
         payingId={payingId}
         onPay={handlePay}
@@ -443,6 +480,7 @@ function RecurringBillsSection() {
       />
       <BillGroup
         title="Upcoming (next 30 days)"
+        tone="upcoming"
         bills={groups.upcoming}
         payingId={payingId}
         onPay={handlePay}
@@ -454,6 +492,7 @@ function RecurringBillsSection() {
       {groups.later.length > 0 ? (
         <BillGroup
           title="Later"
+          tone="later"
           bills={groups.later}
           payingId={payingId}
           onPay={handlePay}
@@ -465,16 +504,16 @@ function RecurringBillsSection() {
       ) : null}
 
       {pausedBills.length > 0 ? (
-        <section className="finance-panel" aria-labelledby="paused-bills">
+        <section className="finance-panel recurring-bills-group recurring-bills-group--paused" aria-labelledby="paused-bills">
           <header className="finance-panel-head">
             <h3 id="paused-bills" className="finance-panel-title">
               Paused
             </h3>
             <p className="finance-panel-sub">Paused bills are hidden from payable groups until you resume them.</p>
           </header>
-          <ul className="budget-list">
+          <ul className="budget-list recurring-bills-list">
             {pausedBills.map((bill) => (
-              <li key={bill.id} className="budget-row">
+              <li key={bill.id} className="budget-row recurring-bill-row recurring-bill-row--paused">
                 <div className="budget-row-main">
                   <span className="budget-row-icon" aria-hidden>
                     <RecurringBillIcon />
@@ -482,9 +521,17 @@ function RecurringBillsSection() {
                   <div className="budget-row-copy">
                     <p className="budget-row-title">{bill.title}</p>
                     <p className="budget-row-meta">
-                      {formatInrFromPaise(bill.amountPaise)} · Next due {bill.nextDueDate}
+                      <span className="recurring-bill-status">Paused</span>
+                      <span className="recurring-bill-meta-sep" aria-hidden>
+                        {' '}
+                        ·{' '}
+                      </span>
+                      <span className="recurring-bill-due">
+                        Next due <time dateTime={bill.nextDueDate}>{bill.nextDueDate}</time>
+                      </span>
                     </p>
                   </div>
+                  <p className="budget-row-amount">{formatInrFromPaise(bill.amountPaise)}</p>
                 </div>
                 <div className="budget-row-actions">
                   <button type="button" className="btn" disabled={submitting} onClick={() => startEdit(bill)}>
@@ -504,8 +551,12 @@ function RecurringBillsSection() {
       ) : null}
 
       {bills.length === 0 ? (
-        <p className="finance-empty">No recurring bills yet. Add one above to track rent, subscriptions, and reminders.</p>
+        <p className="finance-empty">
+          No recurring bills yet. Use <strong>+ Add Recurring Bill</strong> to track rent, subscriptions,
+          and reminders.
+        </p>
       ) : null}
+      </div>
     </div>
   )
 }

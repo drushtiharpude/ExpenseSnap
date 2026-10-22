@@ -62,16 +62,13 @@ function BillSplitter() {
     <section className="finance bill-splitter" aria-labelledby="section-title">
       <PageHeader
         icon="splitter"
+        variant="standard"
         title="Bill Splitter"
         tagline={PAGE_TAGLINES.splitter}
         description="Divide a bill equally by head count. Results stay on this page—they are not saved as transactions."
       />
 
-      <div
-        className={`bill-splitter-layout${
-          showResults ? ' bill-splitter-layout--with-results' : ''
-        }`}
-      >
+      <div className="bill-splitter-layout">
         <form
           className="finance-form finance-panel bill-splitter-form"
           onSubmit={handleSubmit}

@@ -1,3 +1,9 @@
+import {
+  readCloudRecurringBills,
+  readCloudRecurringRaw,
+  saveCloudRecurringBills,
+} from './cloudFinanceStore.js'
+import { isCloudFinanceActive } from './financeSession.js'
 import { validateRecurringBills } from './recurringBill.js'
 
 /** Plain JSON in localStorage for this browser profile. It is not encrypted. */
@@ -66,6 +72,7 @@ function parseStored(raw, customCategories) {
 }
 
 export function readRecurringBills(storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudRecurringBills()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
 
@@ -76,6 +83,7 @@ export function readRecurringBills(storage, options = {}) {
 }
 
 export function readRecurringBillsStorageRaw(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudRecurringRaw()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
   return readRaw(target)
@@ -97,6 +105,9 @@ export function restoreRecurringBillsStorageRaw(storage, raw) {
 }
 
 export function saveRecurringBills(bills, storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) {
+    return saveCloudRecurringBills(bills, options.customCategories ?? [])
+  }
   const validated = validateRecurringBills(bills, options.customCategories ?? [])
   if (!validated.ok) return { ok: false, error: 'invalid', errors: validated.errors }
 

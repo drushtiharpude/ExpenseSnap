@@ -1,3 +1,9 @@
+import {
+  readCloudCategories,
+  readCloudCategoriesRaw,
+  saveCloudCategories,
+} from './cloudFinanceStore.js'
+import { isCloudFinanceActive } from './financeSession.js'
 import { validateCategories } from './category.js'
 
 /** Plain JSON in localStorage for this browser profile. It is not encrypted. */
@@ -62,6 +68,7 @@ function parseStored(raw) {
 }
 
 export function readCategories(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudCategories()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
   const raw = readRaw(target)
@@ -72,6 +79,7 @@ export function readCategories(storage) {
 
 /** Raw string for the key, or null when the key is absent. */
 export function readCategoriesStorageRaw(storage) {
+  if (storage === undefined && isCloudFinanceActive()) return readCloudCategoriesRaw()
   const target = resolveStorage(storage)
   if (!target) return { ok: false, error: 'unavailable' }
   return readRaw(target)
@@ -93,6 +101,9 @@ export function restoreCategoriesStorageRaw(storage, raw) {
 }
 
 export function saveCategories(categories, storage, options = {}) {
+  if (storage === undefined && isCloudFinanceActive()) {
+    return saveCloudCategories(categories)
+  }
   const validated = validateCategories(categories)
   if (!validated.ok) return { ok: false, error: 'invalid', errors: validated.errors }
 

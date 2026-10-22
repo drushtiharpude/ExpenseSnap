@@ -14,11 +14,19 @@ import { CATEGORIES_STORAGE_KEY } from '../src/data/categoryStore.js'
 import { summarizeTransactions } from '../src/finance/summarize.js'
 import {
   summarizeForMonth,
+  assembleAnalyticsInsightList,
   buildAnalyticsInsights,
   buildSavingSuggestions,
   monthlyExpenseSeries,
+  selectPrimaryDashboardInsight,
+  INSIGHT_MIN_TOP_CATEGORY_SHARE_PERCENT,
 } from '../src/finance/analyze.js'
 import { splitBillPaise } from '../src/finance/splitBill.js'
+import {
+  appendDictationText,
+  combineDictationSegments,
+  dictationAppliedTranscript,
+} from '../src/transactions/speechRecognition.js'
 import { readTheme, saveTheme } from '../src/settings/themeStore.js'
 import { createBudget, updateBudget, deleteBudget } from '../src/data/budget.js'
 import { readBudgets, saveBudgets, BUDGETS_STORAGE_KEY } from '../src/data/budgetStore.js'
@@ -32,6 +40,7 @@ import {
 } from '../src/finance/moneyCoachSummary.js'
 import {
   buildEquivalentPeriodExpenseTrend,
+  buildExpenseMonthComparison,
   sumExpensesThroughDay,
 } from '../src/finance/analyze.js'
 import {
@@ -54,6 +63,37 @@ import {
   localCalendarDateString,
 } from '../src/finance/recurringBillSchedule.js'
 import { payRecurringBill } from '../src/finance/recurringBillPay.js'
+import {
+  addSavingsGoalEntry,
+  createSavingsGoal,
+  deleteSavingsGoal,
+  goalSavedBalancePaise,
+} from '../src/data/savingsGoal.js'
+import {
+  readSavingsGoals,
+  saveSavingsGoals,
+  SAVINGS_GOALS_STORAGE_KEY,
+} from '../src/data/savingsGoalStore.js'
+import { goalProgressPercent, goalRingMetrics } from '../src/finance/savingsGoalProgress.js'
+import {
+  buildCategoryDonutSegments,
+  buildDashboardCashFlow,
+  monthKeysWindowEnding,
+} from '../src/finance/dashboardVisuals.js'
+import {
+  buildDashboardWelcomeLine,
+  dashboardDisplayName,
+  resolveDashboardGreetName,
+  timeOfDayGreeting,
+} from '../src/finance/dashboardGreeting.js'
+import { validateDisplayName, validateMotto } from '../src/auth/userProfile.js'
+import { validateProfilePhotoPayload } from '../src/auth/profileMediaStore.js'
+import {
+  clampDashboardMonth,
+  dashboardNextMonth,
+  dashboardPreviousMonth,
+  hasTransactionsInMonth,
+} from '../src/finance/dashboardMonth.js'
 
 const failures = []
 
@@ -68,6 +108,7 @@ function memoryStorage() {
   let failTxRestore = false
   let failBudget = false
   let failRecurringBills = false
+  let failSavingsGoals = false
   return {
     getItem(key) {
       return store.has(key) ? store.get(key) : null
@@ -83,6 +124,9 @@ function memoryStorage() {
         throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' })
       }
       if (failRecurringBills && key === RECURRING_BILLS_STORAGE_KEY) {
+        throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' })
+      }
+      if (failSavingsGoals && key === SAVINGS_GOALS_STORAGE_KEY) {
         throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' })
       }
       store.set(key, value)
@@ -102,6 +146,9 @@ function memoryStorage() {
     },
     set failRecurringBills(value) {
       failRecurringBills = value
+    },
+    set failSavingsGoals(value) {
+      failSavingsGoals = value
     },
   }
 }
@@ -162,6 +209,26 @@ check(
 )
 check('split uneven', split.shares.some((s) => s.amountPaise === 334) && split.shares.some((s) => s.amountPaise === 333))
 
+check('dictation append to empty', appendDictationText('', 'coffee run') === 'coffee run')
+check(
+  'dictation append with spacing',
+  appendDictationText('Team lunch', 'client meeting') === 'Team lunch client meeting',
+)
+check(
+  'dictation combine finals and interim',
+  combineDictationSegments({ 0: 'coffee', 2: 'run' }, 'shop') === 'coffee run shop',
+)
+check(
+  'dictation combine empty',
+  combineDictationSegments({}, '') === '' && combineDictationSegments({ 1: '   ' }, '') === '',
+)
+check(
+  'dictation applied detects new text',
+  dictationAppliedTranscript('', 'coffee run') &&
+    dictationAppliedTranscript('same', 'same') === false &&
+    dictationAppliedTranscript('Team lunch', 'Team lunch client') === true,
+)
+
 const exportCategories = readCategories(mem).categories
 const exportBudgets = readBudgets(mem, { customCategories: exportCategories }).budgets
 const doc = createBackupDocument(
@@ -169,10 +236,17 @@ const doc = createBackupDocument(
   exportCategories,
   exportBudgets,
   [],
+  [],
   now,
 )
 check('backup parse', parseBackupJson(JSON.stringify(doc)).ok)
-check('backup v3 field set', doc.backupVersion === 3 && Array.isArray(doc.budgets) && Array.isArray(doc.recurringBills))
+check(
+  'backup v4 field set',
+  doc.backupVersion === 4 &&
+    Array.isArray(doc.budgets) &&
+    Array.isArray(doc.recurringBills) &&
+    Array.isArray(doc.savingsGoals),
+)
 check('unsupported version', !parseBackupJson(JSON.stringify({ ...doc, backupVersion: 9 })).ok)
 
 const docV1 = {
@@ -234,6 +308,7 @@ const v2ClearParsed = parseBackupJson(
     createBackupDocument(
       readTransactions(v1BudgetMem).transactions,
       exportCategories,
+      [],
       [],
       [],
       now,
@@ -444,7 +519,15 @@ check('analytics expenses only in chart month', oct.expensePaise === 30000 && oc
 const insightTx = readTransactions({ ...mem, failTx: false }).transactions
 const insights = buildAnalyticsInsights(insightTx, '2026-10')
 check('analytics insights', insights.some((i) => i.id === 'top-category') && insights.some((i) => i.id === 'expense-vs-previous'))
-check('analytics series', monthlyExpenseSeries(insightTx).ok)
+const monthlySeries = monthlyExpenseSeries(insightTx)
+check('analytics series', monthlySeries.ok)
+check(
+  'analytics monthly income and expense bars',
+  monthlySeries.months.some(
+    (row) =>
+      row.month === '2026-10' && row.incomePaise === 100000 && row.expensePaise === 30000,
+  ),
+)
 
 const momInsight = insights.find((entry) => entry.id === 'expense-vs-previous')
 check(
@@ -570,6 +653,55 @@ check(
   buildSavingSuggestions(overBudgetStatus, []).some((entry) =>
     entry.id.startsWith('suggestion-budget-exceeded:'),
   ),
+)
+
+const topShareTx = ['food', 'transport', 'bills', 'shopping', 'health', 'other'].map(
+  (categoryId, index) =>
+    createTransaction(
+      {
+        type: 'expense',
+        amountPaise: 1000,
+        date: `2026-10-${String(index + 1).padStart(2, '0')}`,
+        categoryId,
+        description: '',
+      },
+      now,
+    ).transaction,
+)
+const lowShareInsights = buildAnalyticsInsights(topShareTx, '2026-10')
+check(
+  'insight top category needs significant share',
+  !lowShareInsights.some((entry) => entry.id === 'top-category') &&
+    INSIGHT_MIN_TOP_CATEGORY_SHARE_PERCENT === 20,
+)
+
+const overBudgetInsights = buildBudgetInsights(overBudgetStatus)
+const overSuggestions = buildSavingSuggestions(overBudgetStatus, [])
+const assembledOver = assembleAnalyticsInsightList([], overBudgetInsights, overSuggestions)
+check(
+  'insight analytics omits duplicate budget suggestion',
+  assembledOver.some((entry) => entry.id.startsWith('budget-exceeded:')) &&
+    !assembledOver.some((entry) => entry.id.startsWith('suggestion-budget-exceeded:')),
+)
+
+const dashboardPrimaryOver = selectPrimaryDashboardInsight({
+  summary: { ok: true, month: '2026-10', monthExpensePaise: 90000, monthIncomePaise: 0 },
+  monthSummary: summarizeForMonth(
+    [
+      ...insightTx,
+      createTransaction(
+        { type: 'expense', amountPaise: 60000, date: '2026-10-20', categoryId: 'food', description: '' },
+        now,
+      ).transaction,
+    ],
+    '2026-10',
+  ),
+  budgetStatus: overBudgetStatus,
+  customCategories: [],
+})
+check(
+  'insight dashboard prioritizes budget exceeded',
+  dashboardPrimaryOver?.title === 'Budget watch' && dashboardPrimaryOver.body.includes('over your'),
 )
 
 const budgetMem = memoryStorage()
@@ -1300,13 +1432,14 @@ const recurringExport = createRecurringBill(
   exportCategories,
   now,
 )
-const docV3Round = createBackupDocument(
-  readTransactions(mem).transactions,
-  exportCategories,
-  exportBudgets,
-  [recurringExport.bill],
-  now,
-)
+const docV3Round = {
+  backupVersion: 3,
+  exportedAt: now.toISOString(),
+  transactions: readTransactions(mem).transactions,
+  categories: exportCategories,
+  budgets: exportBudgets,
+  recurringBills: [recurringExport.bill],
+}
 const v3Parsed = parseBackupJson(JSON.stringify(docV3Round))
 check('backup v3 round trip', v3Parsed.ok && v3Parsed.backup.recurringBills.length === 1)
 const v3ReplaceMem = memoryStorage()
@@ -1319,6 +1452,68 @@ check(
   'backup v3 replace recurring',
   v3Replace.ok &&
     readRecurringBills(v3ReplaceMem, { customCategories: exportCategories }).bills.some((b) => b.title === 'Internet'),
+)
+
+const savingsFixture = createSavingsGoal(
+  { name: 'Emergency fund', targetPaise: 10000000, targetDate: '2027-12-31', notes: 'Rainy day' },
+  now,
+)
+check('savings goal fixture', savingsFixture.ok)
+const withDeposit = addSavingsGoalEntry(savingsFixture.goal, {
+  type: 'deposit',
+  amountPaise: 250000,
+  date: '2026-10-01',
+  note: 'First deposit',
+})
+check('savings deposit', withDeposit.ok && goalSavedBalancePaise(withDeposit.goal.entries) === 250000)
+const overWithdraw = addSavingsGoalEntry(withDeposit.goal, {
+  type: 'withdrawal',
+  amountPaise: 300000,
+  date: '2026-10-02',
+})
+check('savings withdrawal blocked negative', !overWithdraw.ok)
+const okWithdraw = addSavingsGoalEntry(withDeposit.goal, {
+  type: 'withdrawal',
+  amountPaise: 50000,
+  date: '2026-10-03',
+})
+check('savings withdrawal ok', okWithdraw.ok && goalSavedBalancePaise(okWithdraw.goal.entries) === 200000)
+check(
+  'savings progress percent',
+  goalProgressPercent(200000, 10000000) === 2,
+)
+check(
+  'savings delete blocked with history',
+  !deleteSavingsGoal([okWithdraw.goal], okWithdraw.goal.id).ok,
+)
+check(
+  'savings delete with history explicit',
+  deleteSavingsGoal([okWithdraw.goal], okWithdraw.goal.id, { includeHistory: true }).ok,
+)
+
+const docV4Round = createBackupDocument(
+  readTransactions(mem).transactions,
+  exportCategories,
+  exportBudgets,
+  [],
+  [withDeposit.goal],
+  now,
+)
+const v4Parsed = parseBackupJson(JSON.stringify(docV4Round))
+check('backup v4 round trip', v4Parsed.ok && v4Parsed.backup.savingsGoals.length === 1)
+const v3MissingSavings = parseBackupJson(JSON.stringify(docV3Round))
+check(
+  'backup v3 missing savings goals',
+  v3MissingSavings.ok && v3MissingSavings.backup.savingsGoals.length === 0,
+)
+const v3ReplaceSavingsMem = memoryStorage()
+saveSavingsGoals([savingsFixture.goal], v3ReplaceSavingsMem)
+saveCategories(exportCategories, v3ReplaceSavingsMem)
+saveTransactions(readTransactions(mem).transactions, v3ReplaceSavingsMem)
+const v3ReplaceSavings = applyBackupRestore('replace', v3MissingSavings.backup, v3ReplaceSavingsMem)
+check(
+  'backup v3 replace clears savings',
+  v3ReplaceSavings.ok && readSavingsGoals(v3ReplaceSavingsMem).goals.length === 0,
 )
 
 const v1RecurringMem = memoryStorage()
@@ -1351,6 +1546,129 @@ check(
 )
 check('recurring bills array validation', validateRecurringBills([billFixture.bill], exportCategories).ok)
 
+check(
+  'dashboard month window',
+  monthKeysWindowEnding('2026-10', 4).join(',') === '2026-07,2026-08,2026-09,2026-10',
+)
+const dashTx = readTransactions(mem).transactions
+const dashFlow = buildDashboardCashFlow(dashTx, '2026-10', 4)
+check('dashboard cash flow months', dashFlow.ok && dashFlow.rows.length === 4)
+check(
+  'dashboard donut segments',
+  buildCategoryDonutSegments(
+    [{ categoryId: 'food', amountPaise: 30000 }],
+    30000,
+  ).length === 1,
+)
+check(
+  'savings ring metrics over target',
+  goalRingMetrics(150000, 100000).displayPercent === 150 &&
+    goalRingMetrics(150000, 100000).strokeFraction === 1,
+)
+check('savings ring metrics invalid target', !goalRingMetrics(1000, 0).valid)
+
+const momCompare = buildExpenseMonthComparison(insightTx, '2026-10')
+check(
+  'expense month comparison increase',
+  momCompare.ok &&
+    momCompare.comparable &&
+    momCompare.diffPaise === 22000 &&
+    momCompare.percentChange === 275,
+)
+const sepCompare = buildExpenseMonthComparison(insightTx, '2026-09')
+check(
+  'expense month comparison zero previous',
+  sepCompare.ok &&
+    sepCompare.comparable &&
+    sepCompare.diffPaise === 8000 &&
+    sepCompare.percentChange == null,
+)
+check(
+  'expense month comparison both zero',
+  !buildExpenseMonthComparison(insightTx, '2026-07').comparable,
+)
+
+const dashboardNavNow = new Date('2026-10-15T12:00:00')
+check(
+  'dashboard month clamp future',
+  clampDashboardMonth('2027-01', dashboardNavNow) === '2026-10',
+)
+check(
+  'dashboard month previous year boundary',
+  dashboardPreviousMonth('2026-01') === '2025-12',
+)
+check(
+  'dashboard month next capped at current',
+  dashboardNextMonth('2026-10', dashboardNavNow) === null &&
+    dashboardNextMonth('2026-09', dashboardNavNow) === '2026-10',
+)
+check(
+  'dashboard month has transactions filter',
+  hasTransactionsInMonth(insightTx, '2026-10') &&
+    !hasTransactionsInMonth(insightTx, '2026-07'),
+)
+const dashMonthOct = summarizeForMonth(insightTx, '2026-10')
+const dashMonthJul = summarizeForMonth(insightTx, '2026-07')
+check(
+  'dashboard month summarize empty month',
+  dashMonthJul.ok && dashMonthJul.incomePaise === 0 && dashMonthJul.expensePaise === 0,
+)
+check(
+  'dashboard month summarize distinct totals',
+  dashMonthOct.ok && dashMonthOct.expensePaise > 0,
+)
+
+check(
+  'dashboard greeting morning',
+  timeOfDayGreeting(new Date('2026-10-15T08:30:00')) === 'Good morning',
+)
+check(
+  'dashboard greeting afternoon',
+  timeOfDayGreeting(new Date('2026-10-15T14:00:00')) === 'Good afternoon',
+)
+check(
+  'dashboard greeting evening',
+  timeOfDayGreeting(new Date('2026-10-15T19:00:00')) === 'Good evening',
+)
+check(
+  'dashboard greeting night uses evening',
+  timeOfDayGreeting(new Date('2026-10-15T02:00:00')) === 'Good evening',
+)
+check(
+  'dashboard greeting with username',
+  buildDashboardWelcomeLine('demo_user', new Date('2026-10-15T10:00:00')) ===
+    'Good morning, Demo User',
+)
+check(
+  'dashboard greeting formats dotted username',
+  dashboardDisplayName('alex.jordan') === 'Alex Jordan',
+)
+check(
+  'dashboard greeting skips unusable login id',
+  dashboardDisplayName('!!!') === '' &&
+    buildDashboardWelcomeLine('!!!', new Date('2026-10-15T10:00:00')) === 'Good morning',
+)
+check(
+  'dashboard greeting without username',
+  buildDashboardWelcomeLine('', new Date('2026-10-15T10:00:00')) === 'Good morning' &&
+    dashboardDisplayName(null) === '',
+)
+check(
+  'dashboard greeting prefers display name',
+  resolveDashboardGreetName('Alex', 'demo_user') === 'Alex' &&
+    buildDashboardWelcomeLine('demo_user', new Date('2026-10-15T10:00:00'), 'Alex') ===
+      'Good morning, Alex',
+)
+check('profile display name validation', validateDisplayName('  Sam  ').displayName === 'Sam')
+check(
+  'profile display name rejects invalid',
+  !validateDisplayName('bad_name').ok && validateDisplayName('').displayName === '',
+)
+check('profile motto validation', validateMotto('  Keep going  ').motto === 'Keep going')
+check(
+  'profile photo payload validation',
+  validateProfilePhotoPayload({ mime: 'image/png', dataBase64: 'abcd' }).ok === false,
+)
 if (failures.length > 0) {
   console.error('FAILED:', failures.join(', '))
   process.exit(1)

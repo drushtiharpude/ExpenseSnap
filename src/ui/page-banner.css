@@ -119,51 +119,50 @@
   min-width: 0;
 }
 
-.page-banner--hero .page-banner__field select {
-  background: var(--surface-input);
-  color: var(--text-h);
-  border: 1px solid var(--border);
-}
-
-/* Standard — form-oriented pages */
+/* Standard — utility / management pages (light surface, accent rail) */
 .page-banner--standard {
   padding: var(--space-3) var(--space-4);
-  background: var(--surface-panel);
+  background: var(--surface-panel-gradient, var(--surface-panel));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   border-inline-start: 3px solid var(--accent);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
 }
 
 [data-theme='dark'] .page-banner--standard {
   background: var(--surface-elevated);
 }
 
-/* Hero — Dashboard & Analytics */
+.page-banner--standard .page-banner__icon {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+/* Hero — insight pages (Dashboard, Analytics; premium navy header) */
 .page-banner--hero {
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
-  border: 1px solid var(--page-banner-hero-border, var(--border-subtle));
-  background: var(--page-banner-hero-bg, var(--text-h));
-  box-shadow: var(--shadow-sm);
-  --page-banner-eyebrow: rgb(148 163 184);
-  --page-banner-headline: #f8fafc;
-  --page-banner-desc: rgb(203 213 225);
-  --page-banner-field-label: #f8fafc;
+  border: 1px solid var(--page-banner-hero-border);
+  background: var(--page-banner-hero-bg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  --page-banner-eyebrow: var(--page-banner-hero-eyebrow);
+  --page-banner-headline: var(--page-banner-hero-headline);
+  --page-banner-desc: var(--page-banner-hero-desc);
+  --page-banner-field-label: var(--page-banner-hero-field-label);
 }
 
 .page-banner--hero .page-banner__icon {
   color: var(--accent);
-  background: rgb(16 185 129 / 0.14);
-  border-color: rgb(16 185 129 / 0.35);
+  background: var(--page-banner-hero-icon-bg);
+  border-color: var(--page-banner-hero-icon-border);
 }
 
-[data-theme='dark'] .page-banner--hero {
-  --page-banner-hero-bg: #111827;
-  --page-banner-hero-border: rgb(148 163 184 / 0.14);
-  --page-banner-eyebrow: rgb(148 163 184);
-  --page-banner-headline: #f8fafc;
-  --page-banner-desc: rgb(148 163 184);
+.page-banner--hero .page-banner__field select {
+  background: var(--surface-input);
+  color: var(--text-h);
+  border: 1px solid var(--border);
 }
 
 @media (max-width: 640px) {

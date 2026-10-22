@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { readBudgets } from '../data/budgetStore.js'
 import { readCategories } from '../data/categoryStore.js'
 import { readTransactions } from '../data/transactionStore.js'
-import { categoryLabel, PREDEFINED_CATEGORIES } from '../transactions/categories.js'
+import { categoryLabel } from '../transactions/categories.js'
 import { formatInrFromPaise } from '../transactions/money.js'
 import {
+  assembleAnalyticsInsightList,
   buildAnalyticsInsights,
+  buildExpenseMonthComparison,
   buildSavingSuggestions,
   defaultAnalyticsMonth,
   listTransactionMonths,
@@ -63,10 +65,6 @@ function chartMonthLabel(month, monthKeys) {
   return `${monthOnly} ${String(year).slice(-2)}`
 }
 
-function hasBuiltInCategoryIcon(categoryId) {
-  return PREDEFINED_CATEGORIES.some((category) => category.id === categoryId)
-}
-
 function compareBarWidth(paise, otherPaise) {
   const max = Math.max(paise, otherPaise, 1)
   return Math.max(4, Math.round((paise / max) * 100))
@@ -90,10 +88,6 @@ function CategoryExpenseChart({ categories, customCategories, chartId, monthKey 
 
   return (
     <div className="analytics-chart-block">
-      <p className="analytics-chart-lead">
-        Each bar shows how much of {monthLabel(monthKey)} spending went to that category.
-        Amounts and percentages are listed beside every bar and in the table below.
-      </p>
       <figure className="category-chart" aria-labelledby={`${chartId}-title`}>
         <figcaption id={`${chartId}-title`} className="visually-hidden">
           Expense distribution by category for {monthLabel(monthKey)}
@@ -104,15 +98,15 @@ function CategoryExpenseChart({ categories, customCategories, chartId, monthKey 
             const width = `${Math.max(4, Math.round((category.amountPaise / max) * 100))}%`
             const share =
               total > 0 ? ((category.amountPaise / total) * 100).toFixed(1) : null
-            const showIcon = hasBuiltInCategoryIcon(category.categoryId)
             return (
               <li key={category.categoryId}>
                 <span className="category-bar-label">
-                  {showIcon ? (
-                    <span className="category-bar-icon" aria-hidden="true">
-                      <CategoryExpenseIcon categoryId={category.categoryId} />
-                    </span>
-                  ) : null}
+                  <span className="category-bar-icon" aria-hidden="true">
+                    <CategoryExpenseIcon
+                      categoryId={category.categoryId}
+                      customCategories={customCategories}
+                    />
+                  </span>
                   <span className="category-bar-label-text">
                     {label}
                     {share !== null ? (
@@ -178,6 +172,61 @@ function CategoryExpenseChart({ categories, customCategories, chartId, monthKey 
   )
 }
 
+function ExpenseMonthComparisonSummary({ comparison }) {
+  if (!comparison?.ok) return null
+
+  if (!comparison.comparable) {
+    if (comparison.reason === 'both_zero' && comparison.previousMonth) {
+      return (
+        <p className="analytics-trend-summary analytics-trend-summary--neutral">
+          No expenses recorded in {monthLabel(comparison.currentMonth)} or{' '}
+          {monthLabel(comparison.previousMonth)}.
+        </p>
+      )
+    }
+    return null
+  }
+
+  const previousLabel = monthLabel(comparison.previousMonth)
+  const currentLabel = monthLabel(comparison.currentMonth)
+  const deltaAmount = formatInrFromPaise(Math.abs(comparison.diffPaise))
+  const percentPart =
+    typeof comparison.percentChange === 'number'
+      ? ` (${comparison.percentChange > 0 ? '+' : ''}${comparison.percentChange}%)`
+      : comparison.previousExpensePaise === 0
+        ? ' (previous month had no expenses, so no percentage is shown)'
+        : ''
+
+  if (comparison.direction === 'unchanged') {
+    return (
+      <p className="analytics-trend-summary analytics-trend-summary--neutral" role="status">
+        Expenses in {currentLabel} matched {previousLabel} at{' '}
+        {formatInrFromPaise(comparison.currentExpensePaise)}.
+      </p>
+    )
+  }
+
+  const toneClass =
+    comparison.direction === 'increase'
+      ? 'analytics-trend-summary--increase'
+      : 'analytics-trend-summary--decrease'
+
+  return (
+    <div className={`analytics-trend-summary ${toneClass}`} role="status">
+      <p className="analytics-trend-summary-main">
+        {comparison.direction === 'increase' ? 'Higher' : 'Lower'} than last month:{' '}
+        <span className="amount amount--expense">{deltaAmount}</span>
+        {percentPart}
+      </p>
+      <p className="analytics-trend-summary-sub">
+        {currentLabel}: {formatInrFromPaise(comparison.currentExpensePaise)} · {previousLabel}:{' '}
+        {formatInrFromPaise(comparison.previousExpensePaise)}. This is a factual month-over-month
+        change—not a judgment on your spending.
+      </p>
+    </div>
+  )
+}
+
 function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
   if (months.length === 0) {
     return (
@@ -195,21 +244,23 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
     const only = months[0]
     return (
       <div className="analytics-chart-block">
-        <p className="analytics-chart-lead">
-          You only have expenses recorded in one month so far. Add transactions in another month to
-          see how spending changes over time.
-        </p>
         <p className="analytics-single-month-stat">
           <span className="analytics-single-month-label">{monthLabel(only.month)}</span>
+          <span className="analytics-single-month-value amount amount--income">
+            {formatInrFromPaise(only.incomePaise)} in income
+          </span>
           <span className="analytics-single-month-value amount amount--expense">
             {formatInrFromPaise(only.expensePaise)} in expenses
           </span>
         </p>
         <table className="analytics-data-table">
-          <caption>Monthly expense total</caption>
+          <caption>Monthly income and expense totals</caption>
           <thead>
             <tr>
               <th scope="col">Month</th>
+              <th scope="col" className="col-amount">
+                Income
+              </th>
               <th scope="col" className="col-amount">
                 Expenses
               </th>
@@ -218,6 +269,9 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
           <tbody>
             <tr>
               <td>{monthLabel(only.month)}</td>
+              <td className="amount amount--income col-amount">
+                {formatInrFromPaise(only.incomePaise)}
+              </td>
               <td className="amount amount--expense col-amount">
                 {formatInrFromPaise(only.expensePaise)}
               </td>
@@ -228,11 +282,15 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
     )
   }
 
-  const max = Math.max(...months.map((item) => item.expensePaise))
+  const max = Math.max(
+    ...months.flatMap((item) => [item.incomePaise, item.expensePaise]),
+    0,
+  )
   const barGap = 8
-  const barWidth = 28
+  const barWidth = 14
+  const pairGap = 4
   const minSlotWidth = 56
-  const slotWidth = Math.max(barWidth + barGap, minSlotWidth)
+  const slotWidth = Math.max(barWidth * 2 + pairGap + barGap, minSlotWidth)
   const chartHeight = 160
   const valueBand = 22
   const labelBand = 40
@@ -242,22 +300,22 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
 
   return (
     <div className="analytics-chart-block">
-      <p className="analytics-chart-lead">
-        Taller bars mean higher total expenses that month. The highlighted bar matches the month you
-        selected above; other bars use a neutral tone. Amounts on the bars show when there is room.
+      <p className="analytics-chart-legend">
+        <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--income" />
+        Income
+        <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--expense" />
+        Expenses
+        {highlightMonth ? (
+          <>
+            <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--selected" />
+            Selected month ({monthLabel(highlightMonth)})
+          </>
+        ) : null}
       </p>
-      {highlightMonth && (
-        <p className="analytics-chart-legend">
-          <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--selected" />
-          Selected month ({monthLabel(highlightMonth)})
-          <span className="analytics-chart-legend-swatch analytics-chart-legend-swatch--other" />
-          Other months
-        </p>
-      )}
       <div className="monthly-chart-scroll">
         <figure aria-labelledby={`${chartId}-monthly-title`}>
           <figcaption id={`${chartId}-monthly-title`} className="visually-hidden">
-            Monthly expense totals
+            Monthly income and expense totals
           </figcaption>
           <svg
             className="monthly-chart"
@@ -267,7 +325,7 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
             height={plotBottom + labelBand}
             aria-describedby={`${chartId}-monthly-summary`}
           >
-            <title>Monthly expense comparison</title>
+            <title>Monthly income and expense comparison</title>
             <line
               x1={0}
               y1={plotBottom}
@@ -276,42 +334,47 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
               className="monthly-chart-axis"
             />
             {months.map((item, index) => {
-              const barHeight = max > 0 ? Math.round((item.expensePaise / max) * chartHeight) : 0
+              const incomeHeight =
+                max > 0 ? Math.round((item.incomePaise / max) * chartHeight) : 0
+              const expenseHeight =
+                max > 0 ? Math.round((item.expensePaise / max) * chartHeight) : 0
               const slotX = barGap + index * slotWidth
-              const x = slotX + (slotWidth - barWidth) / 2
+              const pairWidth = barWidth * 2 + pairGap
+              const pairX = slotX + (slotWidth - pairWidth) / 2
+              const incomeX = pairX
+              const expenseX = pairX + barWidth + pairGap
               const labelX = slotX + slotWidth / 2
-              const y = plotBottom - barHeight
-              const showAmount = barHeight >= 28 && item.expensePaise > 0 && slotWidth >= 52
+              const incomeY = plotBottom - incomeHeight
+              const expenseY = plotBottom - expenseHeight
               const isSelected = highlightMonth && item.month === highlightMonth
               return (
                 <g
                   key={item.month}
                   role="img"
-                  aria-label={`${monthLabel(item.month)}: ${formatInrFromPaise(item.expensePaise)} in expenses${
+                  aria-label={`${monthLabel(item.month)}: ${formatInrFromPaise(item.incomePaise)} income, ${formatInrFromPaise(item.expensePaise)} expenses${
                     isSelected ? ', selected month' : ''
                   }`}
                 >
                   <rect
-                    x={x}
-                    y={y}
+                    x={incomeX}
+                    y={incomeY}
                     width={barWidth}
-                    height={barHeight}
+                    height={incomeHeight}
                     rx="4"
-                    fill={isSelected ? 'var(--chart-2)' : 'var(--chart-8)'}
-                    className={`monthly-chart-bar${
+                    fill="var(--chart-2)"
+                    className="monthly-chart-bar monthly-chart-bar--income"
+                  />
+                  <rect
+                    x={expenseX}
+                    y={expenseY}
+                    width={barWidth}
+                    height={expenseHeight}
+                    rx="4"
+                    fill={isSelected ? 'var(--chart-5)' : 'var(--chart-8)'}
+                    className={`monthly-chart-bar monthly-chart-bar--expense${
                       isSelected ? ' monthly-chart-bar--selected' : ''
                     }`}
                   />
-                  {showAmount && (
-                    <text
-                      x={x + barWidth / 2}
-                      y={y - 6}
-                      textAnchor="middle"
-                      className="monthly-chart-amount"
-                    >
-                      {formatInrFromPaise(item.expensePaise)}
-                    </text>
-                  )}
                   <text
                     x={labelX}
                     y={plotBottom + 16}
@@ -333,7 +396,8 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
           const isSelected = highlightMonth && item.month === highlightMonth
           return (
             <li key={item.month}>
-              {monthLabel(item.month)}: {formatInrFromPaise(item.expensePaise)} in expenses
+              {monthLabel(item.month)}: {formatInrFromPaise(item.incomePaise)} income,{' '}
+              {formatInrFromPaise(item.expensePaise)} expenses
               {isSelected ? ' (selected month)' : ''}
             </li>
           )
@@ -346,7 +410,11 @@ function MonthlyExpenseChart({ months, chartId, highlightMonth }) {
 function formatInsight(insight, customCategories, monthKey) {
   if (insight.id === 'top-category') {
     const label = categoryLabel(insight.categoryId, customCategories)
-    return `${label} was your highest spending category in ${monthLabel(monthKey)} at ${formatInrFromPaise(insight.amountPaise)}.`
+    const sharePart =
+      typeof insight.sharePercent === 'number'
+        ? ` (${insight.sharePercent}% of that month's expenses)`
+        : ''
+    return `${label} was your largest category in ${monthLabel(monthKey)} at ${formatInrFromPaise(insight.amountPaise)}${sharePart}.`
   }
   if (insight.id === 'expense-vs-previous') {
     const previous = monthLabel(insight.previousMonth)
@@ -357,25 +425,25 @@ function formatInsight(insight, customCategories, monthKey) {
         ? ` (${insight.percentChange > 0 ? '+' : ''}${insight.percentChange}%)`
         : ''
     if (insight.diffPaise > 0) {
-      return `Expenses in ${current} were ${amount} higher than ${previous}${percentPart}.`
+      return `Total expenses in ${current} were ${amount} higher than ${previous}${percentPart}. That is a month-over-month change, not necessarily a problem—compare categories if you want to adjust.`
     }
-    return `Expenses in ${current} were ${amount} lower than ${previous}${percentPart}.`
+    return `Total expenses in ${current} were ${amount} lower than ${previous}${percentPart}. Month-over-month change only; your pace may still fit your plans.`
   }
   if (insight.id.startsWith('category-mom-up:')) {
     const label = categoryLabel(insight.categoryId, customCategories)
     const previous = monthLabel(insight.previousMonth)
-    return `${label} spending rose by ${formatInrFromPaise(insight.deltaPaise)} compared with ${previous}.`
+    return `${label} spending rose by ${formatInrFromPaise(insight.deltaPaise)} compared with ${previous}. Review recent ${label.toLowerCase()} transactions if that jump was unexpected.`
   }
   if (insight.id.startsWith('budget-exceeded:')) {
     const label = categoryLabel(insight.categoryId, customCategories)
-    return `${label} is over its ${monthLabel(monthKey)} budget by ${formatInrFromPaise(insight.overPaise)}.`
+    return `${label} is over its ${monthLabel(monthKey)} budget by ${formatInrFromPaise(insight.overPaise)}. Pause optional ${label.toLowerCase()} purchases until you're back under the limit.`
   }
   if (insight.id.startsWith('budget-approaching:')) {
     const label = categoryLabel(insight.categoryId, customCategories)
     if (insight.atLimit) {
-      return `${label} is at its ${monthLabel(monthKey)} budget limit.`
+      return `${label} is at its ${monthLabel(monthKey)} budget limit. Any new spending in this category will push you over.`
     }
-    return `${label} has used ${insight.percentUsed}% of its ${monthLabel(monthKey)} budget (${formatInrFromPaise(insight.remainingPaise)} remaining).`
+    return `${label} has used ${insight.percentUsed}% of its ${monthLabel(monthKey)} budget (${formatInrFromPaise(insight.remainingPaise)} left). Plan the rest of the month so you don't overshoot.`
   }
   if (insight.id.startsWith('suggestion-budget-exceeded:')) {
     const label = categoryLabel(insight.categoryId, customCategories)
@@ -419,6 +487,10 @@ function AnalyticsSection() {
     monthOptions.includes(selectedMonth) ? selectedMonth : defaultAnalyticsMonth(records ?? [])
   const monthSummary = records === null ? null : summarizeForMonth(records, activeMonth)
   const expenseSeries = records === null ? null : monthlyExpenseSeries(records)
+  const expenseComparison =
+    records !== null && monthSummary?.ok
+      ? buildExpenseMonthComparison(records, activeMonth)
+      : null
   const transactionInsights =
     records === null || !monthSummary?.ok ? [] : buildAnalyticsInsights(records, activeMonth)
   let smartInsights = transactionInsights
@@ -439,7 +511,11 @@ function AnalyticsSection() {
       if (budgetStatus.ok) {
         const budgetInsights = buildBudgetInsights(budgetStatus)
         const savingSuggestions = buildSavingSuggestions(budgetStatus, transactionInsights)
-        smartInsights = [...transactionInsights, ...budgetInsights, ...savingSuggestions]
+        smartInsights = assembleAnalyticsInsightList(
+          transactionInsights,
+          budgetInsights,
+          savingSuggestions,
+        )
       }
     }
   }
@@ -665,6 +741,9 @@ function AnalyticsSection() {
                     <div className="form-alert" role="alert">
                       <p>Monthly comparisons cannot be calculated from the saved transactions.</p>
                     </div>
+                  )}
+                  {expenseComparison?.ok && (
+                    <ExpenseMonthComparisonSummary comparison={expenseComparison} />
                   )}
                   {expenseSeries?.ok && (
                     <MonthlyExpenseChart

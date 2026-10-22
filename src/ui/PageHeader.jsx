@@ -2,7 +2,9 @@ import { ShellNavIcon } from './shellIcons.jsx'
 
 /**
  * Shared page banner: accessible page title (h1), tagline, description, nav icon, optional toolbar.
- * @param {'hero' | 'standard'} variant — hero: Dashboard & Analytics; standard: form-oriented pages
+ * @param {'hero' | 'standard'} variant
+ *   - `standard` — light surface header for utility / management pages
+ *   - `hero` — premium navy header (Dashboard, Analytics)
  */
 function PageHeader({
   title,
@@ -11,10 +13,12 @@ function PageHeader({
   icon,
   variant = 'standard',
   titleId = 'section-title',
+  welcome,
   children,
 }) {
   return (
     <header className={`page-banner page-banner--${variant}`}>
+      {welcome ? <div className="page-banner__welcome">{welcome}</div> : null}
       <div className="page-banner__row">
         <div className="page-banner__lead">
           <span className="page-banner__icon" aria-hidden="true">

@@ -1,0 +1,295 @@
+/**
+ * ExpenseSnap — application-wide premium surfaces (tokens + panels base).
+ * Dashboard-specific depth lives in finance/dashboardPremium.css.
+ */
+
+/* —— Page banners —— */
+.page-banner--standard {
+  box-shadow: var(--app-card-shadow, var(--shadow-card)), var(--app-card-edge-highlight, var(--panel-edge-highlight));
+  border-inline-start-width: 3px;
+  border-inline-start-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+}
+
+.page-banner--hero {
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+[data-theme='dark'] .page-banner--hero {
+  box-shadow: var(--shadow-card);
+}
+
+.page-banner--hero .page-banner__icon {
+  background: var(--page-banner-hero-icon-bg);
+  border-color: var(--page-banner-hero-icon-border);
+  box-shadow: none;
+}
+
+.page-banner--standard .page-banner__icon {
+  box-shadow: none;
+}
+
+.page-banner__tagline {
+  letter-spacing: -0.02em;
+  color: var(--brand-ink, var(--text-h));
+}
+
+.page-banner--hero .page-banner__tagline {
+  color: var(--page-banner-hero-headline);
+}
+
+/* —— Shell header & notifications —— */
+.shell-app-header {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .shell-app-header {
+  background: color-mix(in srgb, var(--surface-1) 88%, var(--surface-elevated));
+  box-shadow: none;
+}
+
+.notification-centre__bell {
+  border: 1px solid var(--app-card-border, var(--border-subtle));
+  background: var(--app-card-surface, var(--surface-elevated));
+  box-shadow: var(--app-card-shadow, var(--shadow-xs)), var(--app-card-edge-highlight, var(--panel-edge-highlight));
+}
+
+[data-theme='dark'] .notification-centre__bell {
+  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--surface-1));
+}
+
+/* —— Finance pages (non-dashboard) —— */
+.finance.analytics,
+.finance.budgets,
+.finance.bill-splitter,
+.finance-page {
+  --section-accent: var(--accent);
+}
+
+.finance-panel-head {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 88%, transparent);
+}
+
+.finance-panel-title {
+  color: var(--brand-ink, var(--text-h));
+  letter-spacing: -0.015em;
+}
+
+.finance-panel-sub {
+  color: color-mix(in srgb, var(--brand-ink, var(--text-h)) 52%, var(--text));
+}
+
+.finance-empty {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px dashed color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: var(--surface-inset);
+  box-shadow: none;
+}
+
+/* Analytics */
+.finance.analytics .analytics-chart-section.finance-panel {
+  border-color: var(--border-subtle);
+}
+
+.finance.analytics .analytics-chart-section.finance-panel:nth-child(even) {
+  border-color: var(--border-subtle);
+}
+
+.finance.analytics .analytics-insights-panel {
+  border-color: color-mix(in srgb, var(--alert-warning-border) 35%, var(--border-subtle));
+}
+
+.finance.analytics .analytics-insights li {
+  background: var(--surface-inset);
+  box-shadow: none;
+}
+
+.finance.analytics .analytics-chart-panel {
+  background: var(--surface-inset);
+  box-shadow: none;
+}
+
+.finance.analytics .analytics-overview .dashboard-kpi-card {
+  box-shadow: var(--app-card-shadow, var(--shadow-card)), var(--app-card-edge-highlight, var(--panel-edge-highlight));
+}
+
+/* Budgets */
+.finance.budgets .finance-panel,
+.finance.budgets .dashboard-block {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--border-subtle));
+}
+
+.finance.budgets .budget-status-badge--exceeded {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 0 0 1px color-mix(in srgb, var(--alert-error-border) 30%, transparent);
+}
+
+/* Bill splitter */
+.finance.bill-splitter .bill-splitter-form {
+  border-inline-start: 3px solid var(--accent);
+}
+
+.finance.bill-splitter .bill-splitter-result {
+  border-inline-start: 3px solid var(--money-income);
+  background: var(--surface-card);
+}
+
+.split-breakdown-list {
+  box-shadow: var(--shadow-xs), var(--panel-edge-highlight);
+}
+
+.split-breakdown-row:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-inset) 40%, transparent);
+}
+
+/* Savings goals page */
+.finance-page.savings-goals .savings-goals-summary {
+  border-color: color-mix(in srgb, var(--chart-1) 18%, var(--border-subtle));
+  background: var(--surface-card);
+}
+
+.finance-page.savings-goals .savings-goal-card {
+  border-color: var(--border-subtle);
+}
+
+.finance-page.savings-goals .savings-goal-card:nth-child(even) {
+  border-color: var(--border-subtle);
+}
+
+/* Recurring bills */
+.finance-page.recurring-bills .finance-panel {
+  border-color: var(--border-subtle);
+}
+
+/* —— Transactions —— */
+.transaction-panel--list {
+  border-color: color-mix(in srgb, var(--brand-ink, var(--text-h)) 8%, var(--app-card-border, var(--border-subtle)));
+}
+
+.transaction-table-wrap {
+  box-shadow: var(--app-card-shadow, var(--shadow-card)), var(--app-card-edge-highlight, var(--panel-edge-highlight));
+  background: var(--surface-elevated);
+}
+
+.transaction-table .txn-category-icon {
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+
+.transaction-table .amount {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-table td.amount--expense {
+  color: var(--money-expense);
+}
+
+.transaction-table td.amount--income {
+  color: var(--money-income);
+}
+
+.transactions-filters-panel-inner {
+  background: var(--surface-inset);
+  box-shadow: none;
+}
+
+.transactions-empty {
+  box-shadow: var(--shadow-xs);
+}
+
+/* —— Settings —— */
+.settings-panel {
+  border-color: color-mix(in srgb, var(--accent) 14%, var(--border-subtle));
+}
+
+.settings-callout {
+  box-shadow: var(--shadow-xs);
+}
+
+.category-list {
+  box-shadow: var(--shadow-xs), var(--panel-edge-highlight);
+}
+
+/* —— Profile —— */
+.profile-sheet {
+  background: var(--surface-panel-gradient, var(--surface-panel));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card), var(--panel-edge-highlight);
+}
+
+.profile-sheet--personalize {
+  border-color: color-mix(in srgb, var(--chart-1) 16%, var(--border-subtle));
+}
+
+.profile-sheet--account {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--border-subtle));
+}
+
+.profile-sheet__title {
+  color: var(--brand-ink, var(--text-h));
+  letter-spacing: -0.015em;
+}
+
+/* —— Data gate & buttons —— */
+.finance-data-gate {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+}
+
+:root:not([data-theme='dark']) .btn--primary {
+  color: var(--btn-primary-fg);
+  background: var(--accent);
+  border-color: var(--btn-primary-border);
+  box-shadow: var(--shadow-xs);
+}
+
+:root:not([data-theme='dark']) .btn--primary:hover:not(:disabled) {
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, var(--accent) 88%, #252b28);
+  border-color: var(--btn-primary-border);
+}
+
+:root:not([data-theme='dark']) .btn--primary:active:not(:disabled) {
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, var(--accent) 82%, #252b28);
+}
+
+.btn--primary:disabled {
+  color: var(--btn-primary-fg-disabled);
+  background: var(--btn-primary-bg-disabled);
+  border-color: var(--btn-primary-border-disabled);
+  box-shadow: none;
+  opacity: 1;
+}
+
+[data-theme='dark'] .btn--primary {
+  color: var(--btn-primary-fg);
+  background: #a3bfa8;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .btn--primary:hover:not(:disabled) {
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, #a3bfa8 92%, #e1e4ea);
+}
+
+[data-theme='dark'] .btn--primary:active:not(:disabled) {
+  color: var(--btn-primary-fg-hover);
+  background: color-mix(in srgb, #a3bfa8 88%, #171a21);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transaction-table tbody tr,
+  .split-breakdown-row {
+    transition: none;
+  }
+}

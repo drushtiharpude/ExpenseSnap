@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { syncThemePreferenceToCloud } from './themeCloud.js'
 import { applyTheme, readTheme, saveTheme } from './themeStore.js'
 import './ThemeSection.css'
 
@@ -6,7 +7,7 @@ function ThemeSection() {
   const [theme, setTheme] = useState(() => readTheme().theme)
   const [notice, setNotice] = useState(null)
 
-  function selectTheme(nextTheme) {
+  async function selectTheme(nextTheme) {
     setNotice(null)
     const saved = saveTheme(nextTheme)
     if (!saved.ok) {
@@ -18,6 +19,12 @@ function ThemeSection() {
       return
     }
     setTheme(saved.theme)
+    const cloud = await syncThemePreferenceToCloud(saved.theme)
+    if (!cloud.ok) {
+      setNotice(
+        'Theme saved on this device. Cloud appearance preference could not be updated right now.',
+      )
+    }
   }
 
   return (

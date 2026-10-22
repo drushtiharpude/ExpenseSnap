@@ -1,3 +1,5 @@
+import { resolveCategoryIconId } from '../transactions/categoryIcons.js'
+
 /** Lucide-style stroke icons (MIT) — inline to avoid extra dependencies. */
 const common = {
   width: 20,
@@ -65,13 +67,12 @@ export function ShellNavIcon({ name }) {
           <path d="M8 12h8" />
         </svg>
       )
-    case 'coach':
+    case 'savings':
       return (
         <svg {...common}>
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          <path d="M8 10h.01" />
-          <path d="M12 10h.01" />
-          <path d="M16 10h.01" />
+          <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 1.7 3 3 3h13c1.7 0 3-1.3 3-3 0-4.5-6.7-5.7-8-5Z" />
+          <path d="M12 22v-3" />
+          <path d="M8 22h8" />
         </svg>
       )
     case 'settings':
@@ -79,6 +80,22 @@ export function ShellNavIcon({ name }) {
         <svg {...common}>
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
           <circle cx="12" cy="12" r="3" />
+        </svg>
+      )
+    case 'calendar':
+      return (
+        <svg {...common}>
+          <path d="M8 2v4" />
+          <path d="M16 2v4" />
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M3 10h18" />
+        </svg>
+      )
+    case 'bell':
+      return (
+        <svg {...common}>
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
       )
     case 'menu':
@@ -89,45 +106,26 @@ export function ShellNavIcon({ name }) {
           <line x1="4" x2="20" y1="18" y2="18" />
         </svg>
       )
+    case 'profile':
+      return (
+        <svg {...common}>
+          <path d="M20 21a8 8 0 0 0-16 0" />
+          <circle cx="12" cy="8" r="4" />
+        </svg>
+      )
     default:
       return null
   }
 }
 
-/** Money Coach brief card headings (18px stroke icons). */
-export function MoneyCoachBriefIcon({ name }) {
-  const iconProps = { ...common, width: 18, height: 18 }
-  switch (name) {
-    case 'attention':
-      return (
-        <svg {...iconProps}>
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-        </svg>
-      )
-    case 'why':
-      return (
-        <svg {...iconProps}>
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 16v-4" />
-          <path d="M12 8h.01" />
-        </svg>
-      )
-    case 'next':
-      return (
-        <svg {...iconProps}>
-          <path d="M3 5h.01" />
-          <path d="M3 12h.01" />
-          <path d="M3 19h.01" />
-          <path d="M8 5h13" />
-          <path d="M8 12h13" />
-          <path d="M8 19h13" />
-        </svg>
-      )
-    default:
-      return null
-  }
+export function SavingsGoalIcon() {
+  return (
+    <svg {...common}>
+      <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 1.7 3 3 3h13c1.7 0 3-1.3 3-3 0-4.5-6.7-5.7-8-5Z" />
+      <path d="M12 22v-3" />
+      <path d="M8 22h8" />
+    </svg>
+  )
 }
 
 export function RecurringBillIcon() {
@@ -170,10 +168,12 @@ export function DashboardMetricIcon({ name }) {
   }
 }
 
-/** Built-in expense category icons for dashboard breakdown (custom categories fall back to tag). */
-export function CategoryExpenseIcon({ categoryId }) {
+/** Category icons for lists, charts, and budgets (built-in + custom iconId). */
+export function CategoryExpenseIcon({ categoryId, iconId, customCategories = [] }) {
   const iconProps = { ...common, width: 18, height: 18 }
-  switch (categoryId) {
+  const iconKey =
+    iconId ?? (categoryId ? resolveCategoryIconId(categoryId, customCategories) : 'other')
+  switch (iconKey) {
     case 'food':
       return (
         <svg {...iconProps}>

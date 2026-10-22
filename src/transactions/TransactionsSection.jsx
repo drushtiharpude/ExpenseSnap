@@ -6,7 +6,6 @@ import {
   categoriesForType,
   categoryLabel,
   filterCategoryOptions,
-  PREDEFINED_CATEGORIES,
   withSelectedCategory,
 } from './categories.js'
 import PageHeader from '../ui/PageHeader.jsx'
@@ -52,10 +51,6 @@ function compareTransactions(left, right) {
   if (left.date !== right.date) return right.date.localeCompare(left.date)
   if (left.createdAt !== right.createdAt) return right.createdAt.localeCompare(left.createdAt)
   return left.id.localeCompare(right.id)
-}
-
-function hasBuiltInCategoryIcon(categoryId) {
-  return PREDEFINED_CATEGORIES.some((category) => category.id === categoryId)
 }
 
 const EMPTY_FILTERS = {
@@ -299,6 +294,7 @@ function TransactionsSection() {
     <section className="transactions" aria-labelledby="section-title">
       <PageHeader
         icon="transactions"
+        variant="standard"
         title="Transactions"
         tagline={PAGE_TAGLINES.transactions}
         description="Add entries quickly, filter your history, and edit or remove anything you have saved here."
@@ -660,7 +656,6 @@ function TransactionsSection() {
                         transaction.categoryId,
                         customState.categories,
                       )
-                      const showCatIcon = hasBuiltInCategoryIcon(transaction.categoryId)
                       return (
                       <tr
                         key={transaction.id}
@@ -682,11 +677,12 @@ function TransactionsSection() {
                         </td>
                         <td className="txn-category">
                           <span className="txn-category-inner">
-                            {showCatIcon ? (
-                              <span className="txn-category-icon" aria-hidden="true">
-                                <CategoryExpenseIcon categoryId={transaction.categoryId} />
-                              </span>
-                            ) : null}
+                            <span className="txn-category-icon" aria-hidden="true">
+                              <CategoryExpenseIcon
+                                categoryId={transaction.categoryId}
+                                customCategories={customState.categories}
+                              />
+                            </span>
                             <span className="txn-category-label">{catLabel}</span>
                           </span>
                         </td>
